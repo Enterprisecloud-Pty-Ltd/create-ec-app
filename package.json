@@ -1,7 +1,7 @@
 {
   "name": "create-ec-app",
-  "version": "1.0.0",
-  "description": "Unified CLI tool to create different types of EC applications: Webresource, Portal, Power Pages, and Mobile apps",
+  "version": "0.0.2",
+  "description": "Unified CLI tool to create different types of EC applications: Webresource, Portal, Power Pages, and Mobile apps.",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -51,10 +51,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/create-ec-app.git"
+    "url": "https://github.com/Enterprisecloud-Pty-Ltd/create-ec-app.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/create-ec-app/issues"
+    "url": "https://github.com/Enterprisecloud-Pty-Ltd/create-ec-app/issues"
   },
-  "homepage": "https://github.com/your-org/create-ec-app#readme"
+  "homepage": "https://github.com/Enterprisecloud-Pty-Ltd/create-ec-app#readme"
 }

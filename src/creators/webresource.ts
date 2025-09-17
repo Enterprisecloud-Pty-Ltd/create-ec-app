@@ -25,23 +25,40 @@ const runCommand = (command: string, spinnerMessage: string): void => {
 };
 
 export const createWebResourceApp = async (projectName: string): Promise<void> => {
-	// Prompt for Kendo theme
-	const kendoThemes: KendoThemeChoice[] = [
-		{ name: "Default", value: "@progress/kendo-theme-default" },
-		{ name: "Bootstrap (v5)", value: "@progress/kendo-theme-bootstrap" },
-		{ name: "Material (v3)", value: "@progress/kendo-theme-material" },
-		{ name: "Fluent", value: "@progress/kendo-theme-fluent" },
-		{ name: "Classic", value: "@progress/kendo-theme-classic" },
-	];
-
-	const { kendoThemePackage } = await inquirer.prompt<{ kendoThemePackage: string }>([
+	// Prompt for UI library choice
+	const { uiLibrary } = await inquirer.prompt([
 		{
 			type: "list",
-			name: "kendoThemePackage",
-			message: "Which Kendo UI theme would you like to install?",
-			choices: kendoThemes,
+			name: "uiLibrary",
+			message: "Which UI library would you like to use?",
+			choices: [
+				{ name: "Kendo UI (React components with themes)", value: "kendo" },
+				{ name: "Shadcn/ui (Modern React components)", value: "shadcn" },
+			],
 		},
 	]);
+
+	let kendoThemePackage = "";
+	if (uiLibrary === "kendo") {
+		// Prompt for Kendo theme
+		const kendoThemes: KendoThemeChoice[] = [
+			{ name: "Default", value: "@progress/kendo-theme-default" },
+			{ name: "Bootstrap (v5)", value: "@progress/kendo-theme-bootstrap" },
+			{ name: "Material (v3)", value: "@progress/kendo-theme-material" },
+			{ name: "Fluent", value: "@progress/kendo-theme-fluent" },
+			{ name: "Classic", value: "@progress/kendo-theme-classic" },
+		];
+
+		const { kendoThemePackage: selectedTheme } = await inquirer.prompt<{ kendoThemePackage: string }>([
+			{
+				type: "list",
+				name: "kendoThemePackage",
+				message: "Which Kendo UI theme would you like to install?",
+				choices: kendoThemes,
+			},
+		]);
+		kendoThemePackage = selectedTheme;
+	}
 
 	const projectDir = path.resolve(process.cwd(), projectName);
 	console.log(`\nScaffolding a new project in ${chalk.green(projectDir)}...\n`);
@@ -61,26 +78,34 @@ export const createWebResourceApp = async (projectName: string): Promise<void> =
 	fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
 	ora("Updated package.json with Vite 7 overrides and custom build script").succeed();
 
-	// Install dependencies with version constraints and overrides
-	const dependencies: string[] = [
-		"@progress/kendo-react-buttons",
-		"@progress/kendo-licensing",
-		"tailwindcss@^4",
-		"@tailwindcss/vite@^4",
+	// Install dependencies based on UI library choice
+	let dependencies: string[] = [
+		"tailwindcss",
+		"@tailwindcss/vite",
 		"@tanstack/react-query",
 		"zustand",
 		"@types/xrm",
 		"@types/node",
-		kendoThemePackage,
 	];
-	runCommand(
-		`npm install ${dependencies.join(" ")}`,
-		`Installing dependencies (Theme: ${kendoThemePackage.split("/")[1]})...`
-	);
 
-	// Create kendo-tw-preset.js
-	const kendoPresetPath = path.join(projectDir, "kendo-tw-preset.js");
-	const kendoPresetContent = `module.exports = {
+	if (uiLibrary === "kendo") {
+		dependencies.push(
+			"@progress/kendo-react-buttons",
+			"@progress/kendo-licensing",
+			kendoThemePackage
+		);
+	}
+
+	const installMessage = uiLibrary === "kendo"
+		? `Installing dependencies (Kendo Theme: ${kendoThemePackage.split("/")[1]})...`
+		: "Installing dependencies (Shadcn/ui)...";
+
+	runCommand(`npm install ${dependencies.join(" ")}`, installMessage);
+
+	if (uiLibrary === "kendo") {
+		// Create kendo-tw-preset.js
+		const kendoPresetPath = path.join(projectDir, "kendo-tw-preset.js");
+		const kendoPresetContent = `module.exports = {
   theme: {
     extend: {
       spacing: {
@@ -313,12 +338,12 @@ export const createWebResourceApp = async (projectName: string): Promise<void> =
     },
   },
 };`;
-	fs.writeFileSync(kendoPresetPath, kendoPresetContent, "utf8");
-	ora("Created kendo-tw-preset.js").succeed();
+		fs.writeFileSync(kendoPresetPath, kendoPresetContent, "utf8");
+		ora("Created kendo-tw-preset.js").succeed();
 
-	// Create tailwind.config.js with Kendo preset
-	const tailwindConfigPath = path.join(projectDir, "tailwind.config.js");
-	const tailwindConfigContent = `/** @type {import('tailwindcss').Config} */
+		// Create tailwind.config.js with Kendo preset
+		const tailwindConfigPath = path.join(projectDir, "tailwind.config.js");
+		const tailwindConfigContent = `/** @type {import('tailwindcss').Config} */
 
 import kendoTwPreset from "./kendo-tw-preset.js";
 
@@ -332,12 +357,84 @@ export default {
   },
   plugins: [],
 };`;
-	fs.writeFileSync(tailwindConfigPath, tailwindConfigContent, "utf8");
-	ora("Created tailwind.config.js with Kendo preset").succeed();
+		fs.writeFileSync(tailwindConfigPath, tailwindConfigContent, "utf8");
+		ora("Created tailwind.config.js with Kendo preset").succeed();
+	} else {
+		// tsconfig.json
+		const tsconfigPath = path.join(projectDir, "tsconfig.json");
+		const tsConfigContent = `{
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  }
+}`;
 
-	// Overwrite Vite config with advanced build options
-	const viteConfigPath = path.join(projectDir, "vite.config.ts");
-	const newViteConfigContent = `import path from "path";
+		fs.writeFileSync(tsconfigPath, tsConfigContent, "utf8");
+		ora("Updated tsconfig.json with baseUrl and paths").succeed();
+
+		// tsconfig.app.json
+		const tsconfigAppPath = path.join(projectDir, "tsconfig.app.json");
+		const tsConfigAppContent = `{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Shadcn */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}
+`;
+		fs.writeFileSync(tsconfigAppPath, tsConfigAppContent, "utf8");
+		ora("Created tsconfig.app.json").succeed();
+
+		// index.css before we do the install
+		// Update CSS entry point
+		const indexCssPath = path.join(projectDir, "src", "index.css");
+		fs.writeFileSync(indexCssPath, `@import "tailwindcss";`, "utf8");
+		ora("Updated CSS entry point").succeed();
+
+		// Update the vite.config.ts early to include the paths
+		const viteConfigPath = path.join(projectDir, "vite.config.ts");
+		const newViteConfigContent = `import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -377,22 +474,81 @@ export default defineConfig(({ command, mode }) => {
   };
 });
 `;
-	fs.writeFileSync(viteConfigPath, newViteConfigContent, "utf8");
-	ora("Replaced vite.config.ts with custom build config").succeed();
+		fs.writeFileSync(viteConfigPath, newViteConfigContent, "utf8");
+		ora("Replaced vite.config.ts with custom build config").succeed();
 
-	// Update CSS entry point
-	const indexCssPath = path.join(projectDir, "src", "index.css");
-	fs.writeFileSync(indexCssPath, `@import "tailwindcss";`, "utf8");
-	ora("Updated CSS entry point").succeed();
+		// Initialize Shadcn/ui after basic setup
+		runCommand("npx shadcn@latest init --force --silent --yes --base-color neutral", "Initializing Shadcn/ui...");
+
+		// Install some basic Shadcn components
+		runCommand("npx shadcn@latest add --all", "Installing all Shadcn components...");
+	}
+
+	if (uiLibrary === "kendo") {
+		// Overwrite Vite config with advanced build options
+		const viteConfigPath = path.join(projectDir, "vite.config.ts");
+		const newViteConfigContent = `import path from "path";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig(({ command, mode }) => {
+  const isDev = mode === "development" || command === "serve";
+
+  return {
+    base: "./",
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    build: {
+      rollupOptions: {
+        external: ["../../token.json"],
+        output: {
+          manualChunks: undefined,
+          entryFileNames: "[name].js",
+          chunkFileNames: "[name].chunk.js",
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.name?.endsWith(".css")) {
+              return "main.css";
+            }
+            return "[name].[ext]";
+          },
+        },
+      },
+      minify: !isDev,
+      mode: isDev ? "development" : "production",
+      assetsDir: "",
+      target: "es2015",
+      cssCodeSplit: false,
+    },
+  };
+});
+`;
+		fs.writeFileSync(viteConfigPath, newViteConfigContent, "utf8");
+		ora("Replaced vite.config.ts with custom build config").succeed();
+	}
+
+	if (uiLibrary === "kendo") {
+		// Update CSS entry point
+		const indexCssPath = path.join(projectDir, "src", "index.css");
+		fs.writeFileSync(indexCssPath, `@import "tailwindcss";`, "utf8");
+		ora("Updated CSS entry point").succeed();
+	}
 
 	// Clear App.css
 	const appCssPath = path.join(projectDir, "src", "App.css");
 	fs.writeFileSync(appCssPath, "", "utf8");
 	ora("Cleared App.css").succeed();
 
-	// Replace App.tsx with custom content
+	// Replace App.tsx with custom content based on UI library
 	const appTsxPath = path.join(projectDir, "src", "App.tsx");
-	const newAppTsxContent = `import "./App.css";
+	let newAppTsxContent = "";
+
+	if (uiLibrary === "kendo") {
+		newAppTsxContent = `import "./App.css";
 
 function App() {
   return (
@@ -406,15 +562,36 @@ function App() {
 
 export default App;
 `;
+	} else {
+		// Shadcn/ui version - template with Shadcn components
+		newAppTsxContent = `import "./App.css";
+import { Button } from "@/components/ui/button";
+
+function App() {
+  return (
+    <>
+      <div className="flex flex-col h-screen items-center justify-center">
+        <p>Hello, World!</p>
+        <Button>Click me</Button>
+      </div>
+    </>
+  );
+}
+
+export default App;
+`;
+	}
+
 	fs.writeFileSync(appTsxPath, newAppTsxContent, "utf8");
-	ora("Replaced App.tsx with custom template").succeed();
+	ora(`Replaced App.tsx with ${uiLibrary} template`).succeed();
 
 	// Generate main.tsx from template
 	const mainTsxPath = path.join(projectDir, "src", "main.tsx");
+	const kendoImport = uiLibrary === "kendo" ? `import "${kendoThemePackage}/dist/all.css";` : "";
 	const newMainTsxContent = `import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "${kendoThemePackage}/dist/all.css";
+${kendoImport}
 import "./index.css";
 import App from "./App.tsx";
 
