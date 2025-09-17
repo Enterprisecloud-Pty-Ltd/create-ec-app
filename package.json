@@ -1,0 +1,60 @@
+{
+  "name": "create-ec-app",
+  "version": "1.0.0",
+  "description": "Unified CLI tool to create different types of EC applications: Webresource, Portal, Power Pages, and Mobile apps",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "create-ec-app": "bin/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node bin/index.js test-app",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "react",
+    "vite",
+    "nextjs",
+    "expo",
+    "kendo",
+    "tailwind",
+    "cli",
+    "powerpages",
+    "portal",
+    "mobile",
+    "webresource",
+    "dynamics",
+    "ec"
+  ],
+  "author": "Schalk Conradie",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^12.6.3",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.6",
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "bin/**/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/create-ec-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/create-ec-app/issues"
+  },
+  "homepage": "https://github.com/your-org/create-ec-app#readme"
+}
