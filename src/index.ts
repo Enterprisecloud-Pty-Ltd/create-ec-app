@@ -26,8 +26,9 @@ const main = async (): Promise<void> => {
 				name: "newProjectName",
 				message: "What is the name of your project?",
 				validate: (input: string) =>
+					input === "." ||
 					/^([a-z0-9\-_])+$/.test(input) ||
-					"Project name may only include lowercase letters, numbers, underscores, and hyphens.",
+					'Project name may only include "." in order to use the parent directory name, lowercase letters, numbers, underscores, and hyphens.',
 			},
 		]);
 		projectName = newProjectName;
