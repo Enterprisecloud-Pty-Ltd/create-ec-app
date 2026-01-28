@@ -189,7 +189,6 @@ root.render(
     </StrictMode>
 );`;
 
-
 const GIT_IGNORE = `# Dependencies
 node_modules/
 npm-debug.log*
@@ -282,4 +281,4 @@ temp/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db`
+Thumbs.db`;
