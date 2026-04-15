@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <PowerAppsToolsVersion>1.38.3</PowerAppsToolsVersion>
+    <ControlManifestInputFile>control\ControlManifest.Input.xml</ControlManifestInputFile>
+    <OutputPath>$(MSBuildThisFileDirectory)out\controls\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <RootNamespace>{{PCF_NAMESPACE}}.{{PCF_CONSTRUCTOR}}</RootNamespace>
+    <Name>{{PCF_CONSTRUCTOR}}</Name>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerApps.MSBuild.Pcf" Version="1.38.3" />
+  </ItemGroup>
+</Project>

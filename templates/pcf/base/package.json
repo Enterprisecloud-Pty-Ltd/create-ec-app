@@ -1,0 +1,19 @@
+{
+  "name": "{{PCF_PACKAGE_NAME}}",
+  "version": "{{PCF_VERSION}}",
+  "private": true,
+  "description": "{{CONTROL_DESCRIPTION}}",
+  "scripts": {
+    "build": "pcf-scripts build",
+    "clean": "pcf-scripts clean",
+    "lint": "pcf-scripts lint",
+    "rebuild": "npm run clean && npm run build",
+    "start": "pcf-scripts start",
+    "push": "pcf-scripts push"
+  },
+  "devDependencies": {
+    "@types/powerapps-component-framework": "^1.3.14",
+    "pcf-scripts": "^1.48.2",
+    "typescript": "^5.9.3"
+  }
+}

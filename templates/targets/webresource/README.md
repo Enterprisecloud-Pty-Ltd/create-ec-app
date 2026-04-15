@@ -258,6 +258,76 @@ export function AccountsList() {
   - Upload your index.html, index.js and main.css to your folder.
   - This will now allow you to use auto publisher to bind to your deployed resources.
 
+## Generate a PCF Wrapper
+
+If you want to host the React webresource inside a PCF control instead of loading the HTML webresource directly in an iframe, use `create-ec-app` itself to generate the wrapper for an existing webresource project.
+
+Basic flow:
+
+1. Build the webresource:
+
+```bash
+npm run build
+```
+
+2. Run the generator against the current project directory:
+
+```bash
+npx create-ec-app --pcf-dir . --namespace EC --constructor FusionNotebookHost
+```
+
+If you are not inside the webresource folder, point `--pcf-dir` at that folder explicitly:
+
+```bash
+npx create-ec-app --pcf-dir /path/to/my-webresource --namespace EC --constructor FusionNotebookHost
+```
+
+This writes a standalone PCF project to `pcf/FusionNotebookHost` by default. The generated control:
+
+- imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
+- reuses the built stylesheet from `dist/main.css`
+- creates `src/runtime/types.ts` only if that file does not already exist
+- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
+- mounts your React app directly into the PCF container
+
+Typical conversion flow from inside a generated webresource project:
+
+```bash
+npm install
+npm run build
+npx create-ec-app --pcf-dir . --namespace EC --constructor FusionNotebookHost --display-name "Fusion Notebook Host"
+cd pcf/FusionNotebookHost
+npm install
+npm run build
+```
+
+Useful options:
+
+- `--dist dist` to point at a different build folder
+- `--output pcf/MyControl` to choose the target folder
+- `--template /path/to/create-ec-app/templates/pcf/base` to swap the base shell
+- `--layer path/to/layer` to apply one or more patch layers after the base copy
+
+Build the generated PCF project from inside the generated folder:
+
+```bash
+cd pcf/FusionNotebookHost
+npm install
+npm run build
+```
+
+What gets generated:
+
+- a minimal PCF wrapper project under `pcf/<ConstructorName>`
+- a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
+- direct imports back to your webresource source and built CSS
+
+What does not happen:
+
+- your existing webresource project is not converted in place
+- your React source is not moved into the PCF project
+- the generated PCF project does not automatically get added to a Dataverse solution
+
 ## Notes
 
 - If you change the build, ensure code splitting stays disabled and asset names remain predictable to simplify web resource updates.

@@ -14,6 +14,7 @@ import {
 } from "@clack/prompts";
 import fs from "fs-extra";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
+import { generatePcfFromExistingWebresource } from "./pcf.js";
 
 const { execSync } = await import("node:child_process");
 
@@ -24,6 +25,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function main() {
+	const cliArgs = parseCliArgs(process.argv.slice(2));
+
+	if (cliArgs.pcfDir) {
+		const { pcfDir, ...rest } = cliArgs;
+		const result = await generatePcfFromExistingWebresource({
+			pcfDir,
+			...stripUndefined(rest),
+		});
+		outro(
+			`Generated PCF control at ${result.outputDir} using template ${result.templateDir}`
+		);
+		return;
+	}
+
 	intro("Create EC App");
 
 	const name = await text({
@@ -153,6 +168,49 @@ main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
+
+function parseCliArgs(argv: string[]) {
+	const read = (name: string) => {
+		const index = argv.indexOf(name);
+		return index >= 0 ? argv[index + 1] : undefined;
+	};
+
+	const readAll = (name: string) => {
+		const values: string[] = [];
+		for (let index = 0; index < argv.length; index += 1) {
+			if (argv[index] === name && argv[index + 1]) {
+				values.push(argv[index + 1] as string);
+			}
+		}
+		return values;
+	};
+
+	const readNumber = (name: string) => {
+		const value = read(name);
+		if (!value) return undefined;
+		const parsed = Number(value);
+		return Number.isFinite(parsed) ? parsed : undefined;
+	};
+
+	return {
+		pcfDir: read("--pcf-dir"),
+		constructor: read("--constructor"),
+		description: read("--description"),
+		displayName: read("--display-name"),
+		dist: read("--dist"),
+		layers: readAll("--layer"),
+		namespace: read("--namespace"),
+		output: read("--output"),
+		packageName: read("--package-name"),
+		template: read("--template"),
+		version: read("--version"),
+	};
+}
+
+function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+	const entries = Object.entries(value).filter(([, entryValue]) => entryValue !== undefined);
+	return Object.fromEntries(entries) as Partial<T>;
+}
 
 // NOTE: Constants
 const POWER_PAGES_KENDO_MAIN_TSX = `import { StrictMode } from "react";

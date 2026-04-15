@@ -34,7 +34,7 @@ export async function applyLayer(layerDir: string, projectDir: string) {
 		}
 
 		if (
-			/\.(patch\.ts|patch\.tsx|patch\.js|patch\.jsx|patch\.css)$/.test(
+			/\.(patch\.ts|patch\.tsx|patch\.js|patch\.jsx|patch\.css|patch\.xml|patch\.md)$/.test(
 				entry.name
 			)
 		) {

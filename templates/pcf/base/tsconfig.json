@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["react", "react-dom", "powerapps-component-framework"],
+    "typeRoots": ["./node_modules/@types", "{{PROJECT_NODE_MODULES_TYPES_ROOT}}"],
+    "baseUrl": "{{PROJECT_ROOT_REL}}",
+    "paths": {
+      "@/*": ["src/*"],
+      "react": ["node_modules/@types/react"],
+      "react/jsx-runtime": ["node_modules/@types/react/jsx-runtime"],
+      "react-dom": ["node_modules/@types/react-dom"],
+      "react-dom/client": ["node_modules/@types/react-dom/client"]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "{{PROJECT_ROOT_REL}}/src/**/*.ts",
+    "{{PROJECT_ROOT_REL}}/src/**/*.tsx"
+  ],
+  "exclude": [
+    "{{PROJECT_ROOT_REL}}/src/main.tsx",
+    "{{PROJECT_ROOT_REL}}/src/services/AuthService.ts"
+  ]
+}
