@@ -194,7 +194,7 @@ function parseCliArgs(argv: string[]) {
 
 	return {
 		pcfDir: read("--pcf-dir"),
-		constructor: read("--constructor"),
+		controlConstructor: read("--constructor"),
 		description: read("--description"),
 		displayName: read("--display-name"),
 		dist: read("--dist"),

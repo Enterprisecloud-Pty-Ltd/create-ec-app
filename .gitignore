@@ -78,7 +78,8 @@ tmp/
 temp/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

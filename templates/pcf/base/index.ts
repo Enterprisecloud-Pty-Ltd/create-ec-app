@@ -137,10 +137,6 @@ export class {{PCF_CONSTRUCTOR}}
 	}
 
 	private render(): void {
-		const AppComponent = App as React.ComponentType<{
-			runtime?: PcfRuntimeContext;
-		}>;
-
 		this.root?.render(
 			React.createElement(
 				StrictMode,
@@ -148,7 +144,7 @@ export class {{PCF_CONSTRUCTOR}}
 				React.createElement(
 					QueryClientProvider,
 					{ client: this.queryClient },
-					React.createElement(AppComponent, { runtime: this.runtime }),
+					React.createElement(App, { runtime: this.runtime }),
 				),
 			),
 		);

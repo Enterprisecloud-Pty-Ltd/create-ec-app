@@ -25,7 +25,7 @@ export interface PcfRuntimeContext {
 
 export interface PcfCliOptions {
 	pcfDir: string;
-	constructor?: string | undefined;
+	controlConstructor?: string | undefined;
 	description?: string | undefined;
 	displayName?: string | undefined;
 	dist?: string | undefined;
@@ -52,7 +52,7 @@ export async function generatePcfFromExistingWebresource(
 		typeof packageJson?.name === "string" ? packageJson.name : folderName;
 	const displayName = toDisplayName(folderName);
 	const constructorName =
-		options.constructor ??
+		options.controlConstructor ??
 		`${toPascalCase(packageName.replace(/[^a-z0-9]+/gi, " "))}Host`;
 	const namespace = options.namespace ?? "EC";
 	const version = options.version ?? "1.0.0";
