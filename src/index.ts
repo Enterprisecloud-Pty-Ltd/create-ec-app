@@ -24,6 +24,24 @@ type UiTarget = "kendo" | "shadcn-ui";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+interface CliArgs {
+	pcfDir?: string;
+	controlConstructor?: string;
+	description?: string;
+	displayName?: string;
+	dist?: string;
+	layers?: string[];
+	namespace?: string;
+	output?: string;
+	packageName?: string;
+	template?: string;
+	version?: string;
+	projectName?: string;
+	target?: AppTarget;
+	uiType?: UiTarget;
+	install?: boolean;
+}
+
 async function main() {
 	const cliArgs = parseCliArgs(process.argv.slice(2));
 
@@ -41,71 +59,55 @@ async function main() {
 
 	intro("Create EC App");
 
-	const name = await text({
-		message: "Project name",
-		placeholder: "my-app",
-		validate(value) {
-			if (value.length === 0) return "Project name cannot be empty";
-			if (value.toLocaleLowerCase() !== value)
-				return "Project name must be lowercase";
-			if (/\s/.test(value)) return "Project name cannot contain spaces";
-			if (/[^a-z0-9-_]/.test(value))
-				return "Project name can only contain letters, numbers, hyphens, and underscores";
-		},
-	});
+	const options = await resolveScaffoldOptions(cliArgs);
 
-	if (isCancel(name)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
+	log.step(`Creating project: ${options.projectName}`);
+	log.step(`Selected target: ${options.target}`);
+
+	await scaffoldProject(options);
+
+	outro(
+		`Scaffolded ${options.projectName} as ${options.target} with ${options.uiType}. Next steps: 'git remote origin add <url>'`
+	);
+}
+
+async function resolveScaffoldOptions(cliArgs: CliArgs): Promise<ScaffoldOptions> {
+	const projectName = (cliArgs.projectName ?? (await promptProjectName())).trim();
+	const projectNameError = validateProjectName(projectName);
+	if (projectNameError) {
+		throw new Error(projectNameError);
 	}
 
-	const projectName = String(name).trim();
+	const target = cliArgs.target ?? (await promptTarget());
+	const uiType = cliArgs.uiType ?? (await promptUiType());
+	const shouldPromptForInstall =
+		cliArgs.install === undefined &&
+		(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
+	const install = shouldPromptForInstall
+		? await promptInstallDependencies()
+		: cliArgs.install ?? false;
 
-	log.step(`Creating project: ${projectName}`);
+	return {
+		install,
+		projectName: projectName.trim(),
+		target,
+		uiType,
+	};
+}
 
-	const target = await select<AppTarget>({
-		message: "What are you building?",
-		options: [
-			{ label: "Web Resource", value: "webresource" },
-			{ label: "Portal (WIP)", value: "portal" },
-			{ label: "Static Web App", value: "swa" },
-			{ label: "Power Pages", value: "power-pages" },
-		],
-	});
+interface ScaffoldOptions {
+	install: boolean;
+	projectName: string;
+	target: AppTarget;
+	uiType: UiTarget;
+}
 
-	if (isCancel(target)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
-
-	log.step(`Selected target: ${target}`);
-
-	const uiType = await select<UiTarget>({
-		message: "What UI library do you want to use?",
-		options: [
-			{ label: "Kendo UI", value: "kendo" },
-			{ label: "Shadcn/UI", value: "shadcn-ui" },
-		],
-	});
-
-	if (isCancel(uiType)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
-
-	const shouldRunNpmInstall = await select<{ run: boolean }>({
-		message: "Do you want to install dependencies?",
-		options: [
-			{ label: "Yes", value: { run: true } },
-			{ label: "No", value: { run: false } },
-		],
-	});
-
-	if (isCancel(shouldRunNpmInstall)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
-
+async function scaffoldProject({
+	install,
+	projectName,
+	target,
+	uiType,
+}: ScaffoldOptions) {
 	const projectDir = path.join(process.cwd(), projectName);
 	const templatesRoot = path.join(__dirname, "..", "templates");
 
@@ -135,7 +137,7 @@ async function main() {
 		await fs.writeFile(mainTsxPath, POWER_PAGES_KENDO_MAIN_TSX, "utf-8");
 	}
 
-	if (shouldRunNpmInstall.run) {
+	if (install) {
 		const s = spinner();
 		s.start("Running npm install...");
 		const { execSync } = await import("node:child_process");
@@ -158,10 +160,6 @@ async function main() {
 		stdio: "ignore",
 	});
 	sGit.stop("Git repository initialized.");
-
-	outro(
-		`Scaffolded ${projectName} as ${target} with ${uiType}. Next steps: 'git remote origin add <url>'`
-	);
 }
 
 main().catch((err) => {
@@ -169,42 +167,237 @@ main().catch((err) => {
 	process.exit(1);
 });
 
-function parseCliArgs(argv: string[]) {
+async function promptProjectName(): Promise<string> {
+	const name = await text({
+		message: "Project name",
+		placeholder: "my-app",
+		validate: validateProjectName,
+	});
+
+	if (isCancel(name)) {
+		cancel("Operation cancelled.");
+		process.exit(0);
+	}
+
+	return String(name).trim();
+}
+
+async function promptTarget(): Promise<AppTarget> {
+	const target = await select<AppTarget>({
+		message: "What are you building?",
+		options: [
+			{ label: "Web Resource", value: "webresource" },
+			{ label: "Portal (WIP)", value: "portal" },
+			{ label: "Static Web App", value: "swa" },
+			{ label: "Power Pages", value: "power-pages" },
+		],
+	});
+
+	if (isCancel(target)) {
+		cancel("Operation cancelled.");
+		process.exit(0);
+	}
+
+	return target;
+}
+
+async function promptUiType(): Promise<UiTarget> {
+	const uiType = await select<UiTarget>({
+		message: "What UI library do you want to use?",
+		options: [
+			{ label: "Kendo UI", value: "kendo" },
+			{ label: "Shadcn/UI", value: "shadcn-ui" },
+		],
+	});
+
+	if (isCancel(uiType)) {
+		cancel("Operation cancelled.");
+		process.exit(0);
+	}
+
+	return uiType;
+}
+
+async function promptInstallDependencies(): Promise<boolean> {
+	const shouldRunNpmInstall = await select<{ run: boolean }>({
+		message: "Do you want to install dependencies?",
+		options: [
+			{ label: "Yes", value: { run: true } },
+			{ label: "No", value: { run: false } },
+		],
+	});
+
+	if (isCancel(shouldRunNpmInstall)) {
+		cancel("Operation cancelled.");
+		process.exit(0);
+	}
+
+	return shouldRunNpmInstall.run;
+}
+
+function validateProjectName(value: string): string | undefined {
+	if (value.length === 0) return "Project name cannot be empty";
+	if (value.toLocaleLowerCase() !== value)
+		return "Project name must be lowercase";
+	if (/\s/.test(value)) return "Project name cannot contain spaces";
+	if (/[^a-z0-9-_]/.test(value))
+		return "Project name can only contain letters, numbers, hyphens, and underscores";
+	return undefined;
+}
+
+function parseCliArgs(argv: string[]): CliArgs {
 	const read = (name: string) => {
+		const equalsPrefix = `${name}=`;
+		const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
+		if (equalsValue) {
+			return equalsValue.slice(equalsPrefix.length);
+		}
+
 		const index = argv.indexOf(name);
-		return index >= 0 ? argv[index + 1] : undefined;
+		const value = index >= 0 ? argv[index + 1] : undefined;
+		return value && !value.startsWith("--") ? value : undefined;
 	};
 
 	const readAll = (name: string) => {
 		const values: string[] = [];
+		const equalsPrefix = `${name}=`;
 		for (let index = 0; index < argv.length; index += 1) {
-			if (argv[index] === name && argv[index + 1]) {
+			const arg = argv[index];
+			if (arg?.startsWith(equalsPrefix)) {
+				values.push(arg.slice(equalsPrefix.length));
+			}
+
+			if (
+				arg === name &&
+				argv[index + 1] &&
+				!argv[index + 1]?.startsWith("--")
+			) {
 				values.push(argv[index + 1] as string);
 			}
 		}
 		return values;
 	};
 
-	const readNumber = (name: string) => {
-		const value = read(name);
-		if (!value) return undefined;
-		const parsed = Number(value);
-		return Number.isFinite(parsed) ? parsed : undefined;
-	};
+	const has = (name: string) => argv.includes(name);
+	const target = readTarget(argv);
+	const uiType = readUiType(argv);
+	const layers = readAll("--layer");
+	if (has("--install") && has("--no-install")) {
+		throw new Error("Use only one dependency option: --install or --no-install.");
+	}
+	const install = has("--install") ? true : has("--no-install") ? false : undefined;
 
 	return {
-		pcfDir: read("--pcf-dir"),
-		controlConstructor: read("--constructor"),
-		description: read("--description"),
-		displayName: read("--display-name"),
-		dist: read("--dist"),
-		layers: readAll("--layer"),
-		namespace: read("--namespace"),
-		output: read("--output"),
-		packageName: read("--package-name"),
-		template: read("--template"),
-		version: read("--version"),
+		...defined("pcfDir", read("--pcf-dir")),
+		...defined("controlConstructor", read("--constructor")),
+		...defined("description", read("--description")),
+		...defined("displayName", read("--display-name")),
+		...defined("dist", read("--dist")),
+		...(layers.length > 0 ? { layers } : {}),
+		...defined("namespace", read("--namespace")),
+		...defined("output", read("--output")),
+		...defined("packageName", read("--package-name")),
+		...defined("template", read("--template")),
+		...defined("version", read("--version")),
+		...defined("projectName", read("--project-name") ?? read("--name")),
+		...defined("target", target),
+		...defined("uiType", uiType),
+		...defined("install", install),
 	};
+}
+
+function defined<K extends keyof CliArgs>(
+	key: K,
+	value: CliArgs[K] | undefined,
+): Pick<CliArgs, K> | Record<string, never> {
+	return value === undefined ? {} : ({ [key]: value } as Pick<CliArgs, K>);
+}
+
+function readTarget(argv: string[]): AppTarget | undefined {
+	const targetFlags: Array<[string, AppTarget]> = [
+		["--webresource", "webresource"],
+		["--portal", "portal"],
+		["--power-pages", "power-pages"],
+		["--swa", "swa"],
+	];
+	const selected = targetFlags.filter(([flag]) => argv.includes(flag));
+	const targetValue = readStringOption(argv, "--target");
+
+	if (selected.length > 1 || (selected.length === 1 && targetValue)) {
+		throw new Error(
+			"Use only one target option: --webresource, --portal, --power-pages, --swa, or --target.",
+		);
+	}
+
+	if (selected.length === 1) {
+		return selected[0]?.[1];
+	}
+
+	if (!targetValue) {
+		return undefined;
+	}
+
+	if (isAppTarget(targetValue)) {
+		return targetValue;
+	}
+
+	throw new Error(
+		`Unsupported target "${targetValue}". Use webresource, portal, power-pages, or swa.`,
+	);
+}
+
+function readUiType(argv: string[]): UiTarget | undefined {
+	const uiFlags: Array<[string, UiTarget]> = [
+		["--kendo", "kendo"],
+		["--shadcn", "shadcn-ui"],
+		["--shadcn-ui", "shadcn-ui"],
+	];
+	const selected = uiFlags.filter(([flag]) => argv.includes(flag));
+	const uiValue = readStringOption(argv, "--ui");
+
+	if (selected.length > 1 || (selected.length === 1 && uiValue)) {
+		throw new Error(
+			"Use only one UI option: --kendo, --shadcn, --shadcn-ui, or --ui.",
+		);
+	}
+
+	if (selected.length === 1) {
+		return selected[0]?.[1];
+	}
+
+	if (!uiValue) {
+		return undefined;
+	}
+
+	if (isUiTarget(uiValue)) {
+		return uiValue;
+	}
+
+	if (uiValue === "shadcn") {
+		return "shadcn-ui";
+	}
+
+	throw new Error(`Unsupported UI "${uiValue}". Use kendo, shadcn, or shadcn-ui.`);
+}
+
+function readStringOption(argv: string[], name: string): string | undefined {
+	const equalsPrefix = `${name}=`;
+	const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
+	if (equalsValue) {
+		return equalsValue.slice(equalsPrefix.length);
+	}
+
+	const index = argv.indexOf(name);
+	const value = index >= 0 ? argv[index + 1] : undefined;
+	return value && !value.startsWith("--") ? value : undefined;
+}
+
+function isAppTarget(value: string): value is AppTarget {
+	return ["webresource", "portal", "power-pages", "swa"].includes(value);
+}
+
+function isUiTarget(value: string): value is UiTarget {
+	return ["kendo", "shadcn-ui"].includes(value);
 }
 
 function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
