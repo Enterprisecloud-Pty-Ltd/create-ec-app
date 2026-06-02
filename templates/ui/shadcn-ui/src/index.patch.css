@@ -1,8 +1,9 @@
 @layer theme, base, components, utilities;
 
-@import "tailwindcss/theme.css" layer(theme) prefix(ec);
-@import "tailwindcss/utilities.css" layer(utilities) prefix(ec);
+@import "tailwindcss/theme.css" layer(theme) prefix(ec) important;
+@import "tailwindcss/utilities.css" layer(utilities) prefix(ec) important;
 @import "tw-animate-css/prefix";
+@import "shadcn/tailwind.css";
 
 @custom-variant hover (&:hover);
 @custom-variant dark (&:is(.ec-app.dark *, .ec-app .dark *));

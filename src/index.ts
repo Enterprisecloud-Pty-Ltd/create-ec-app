@@ -225,7 +225,7 @@ function withEcPortalContainers(source: string, filePath: string): string {
 }
 
 function withGeneratedShadcnCompatibility(source: string): string {
-	const withChartAttributeSelectors = source
+	const withChartAttributeSelectors = removeStandaloneEcPrefixes(source)
 		.replace(/\[stroke=#ccc\]/g, "[stroke='#ccc']")
 		.replace(/\[stroke=#fff\]/g, "[stroke='#fff']")
 		.replace(
@@ -239,6 +239,18 @@ function withGeneratedShadcnCompatibility(source: string): string {
 	}
 
 	return withChartAttributeSelectors.replace(/(\n\s*)table:/g, "$1month_grid:");
+}
+
+function removeStandaloneEcPrefixes(source: string): string {
+	let updated = source;
+	let previous: string;
+
+	do {
+		previous = updated;
+		updated = updated.replace(/(^|[\s"'])ec:(?=\s|["'])/g, "$1");
+	} while (updated !== previous);
+
+	return updated;
 }
 
 function addEcPortalImport(source: string): string {

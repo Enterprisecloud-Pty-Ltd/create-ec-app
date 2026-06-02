@@ -270,19 +270,20 @@ Basic flow:
 npm run build
 ```
 
-2. Run the generator against the current project directory:
+2. Run the generator and point `--pcf-dir` at the generated PCF project directory:
 
 ```bash
-npx create-ec-app --pcf-dir . --namespace EC --constructor FusionNotebookHost
+npx create-ec-app@latest --pcf-dir ./pcf/{{ControlName}} namespace {{EC}} --constructor {{ControlName}} --display-name "Control Name"
 ```
 
-If you are not inside the webresource folder, point `--pcf-dir` at that folder explicitly:
+3. Install dependencies inside that generated PCF directory:
 
 ```bash
-npx create-ec-app --pcf-dir /path/to/my-webresource --namespace EC --constructor FusionNotebookHost
+cd ./pcf/{{ControlName}}
+npm install
 ```
 
-This writes a standalone PCF project to `pcf/FusionNotebookHost` by default. The generated control:
+This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - reuses the built stylesheet from `dist/main.css`
@@ -295,7 +296,7 @@ Typical conversion flow from inside a generated webresource project:
 ```bash
 npm install
 npm run build
-npx create-ec-app --pcf-dir . --namespace EC --constructor FusionNotebookHost --display-name "Fusion Notebook Host"
+npx create-ec-app@latest --pcf-dir ./pcf/FusionNotebookHost namespace EC --constructor FusionNotebookHost --display-name "Fusion Notebook Host"
 cd pcf/FusionNotebookHost
 npm install
 npm run build

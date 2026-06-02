@@ -20,6 +20,14 @@ npx shadcn@latest add --all --yes --overwrite
 
 This keeps generated components aligned with the latest shadcn registry. The template `components.json` sets the Tailwind prefix to `ec`, which makes shadcn emit classes such as `ec:flex`.
 
+Current shadcn projects also depend on the `shadcn` package at build time because `src/index.css` imports:
+
+```css
+@import "shadcn/tailwind.css";
+```
+
+That shared CSS defines shadcn's Tailwind v4 custom variants and utilities, including Radix/Base UI state and orientation variants used by controls such as sliders, accordions, scroll areas, menus, and sidebars. The app build resolves this import into `dist/main.css`; PCF wrappers then bundle that built CSS from the webresource project.
+
 After generation, the CLI applies small compatibility fixes for app embedding:
 
 - Radix/Base UI portals render into the app-local portal root from `EcAppShell`.
@@ -55,10 +63,12 @@ cd my-app
 npm run build
 ```
 
-Then run the CLI from the app's parent folder:
+Then run the published CLI and install the generated PCF project's dependencies:
 
 ```bash
-npm run dev -- --pcf-dir ./my-app
+npx create-ec-app@latest --pcf-dir ./pcf/{{ControlName}} namespace {{EC}} --constructor {{ControlName}} --display-name "Control Name"
+cd ./pcf/{{ControlName}}
+npm install
 ```
 
 This creates a PCF wrapper under the webresource project, reuses the app's built CSS, and keeps the generated app wrapped in `EcAppShell` so scoped styles and app-local portals continue to work inside the PCF host.
