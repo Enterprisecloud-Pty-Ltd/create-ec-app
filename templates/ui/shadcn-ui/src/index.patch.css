@@ -45,7 +45,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-.ec-app {
+.ec-app[data-ec-app-id="{{APP_NAME}}"] {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -83,8 +83,8 @@
   color: var(--foreground);
 }
 
-.ec-app.dark,
-.ec-app .dark {
+.ec-app[data-ec-app-id="{{APP_NAME}}"].dark,
+.ec-app[data-ec-app-id="{{APP_NAME}}"] .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

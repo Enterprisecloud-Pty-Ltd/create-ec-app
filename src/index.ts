@@ -131,13 +131,16 @@ async function scaffoldProject({
 		UI: uiType,
 	});
 
+	const dependenciesInstalledByUiGenerator =
+		uiType === "shadcn-ui" ? await generateShadcnUi(projectDir) : false;
+
 	//WARN: This is a special case fix for having AuthContext in Kendo for Power Pages
 	if (target === "power-pages" && uiType === "kendo") {
 		const mainTsxPath = path.join(projectDir, "src", "main.tsx");
 		await fs.writeFile(mainTsxPath, POWER_PAGES_KENDO_MAIN_TSX, "utf-8");
 	}
 
-	if (install) {
+	if (install && !dependenciesInstalledByUiGenerator) {
 		const s = spinner();
 		s.start("Running npm install...");
 		const { execSync } = await import("node:child_process");
@@ -160,6 +163,158 @@ async function scaffoldProject({
 		stdio: "ignore",
 	});
 	sGit.stop("Git repository initialized.");
+}
+
+async function generateShadcnUi(projectDir: string): Promise<boolean> {
+	const s = spinner();
+	s.start("Generating shadcn/ui components...");
+
+	try {
+		execSync("npx shadcn@latest add --all --yes --overwrite", {
+			cwd: projectDir,
+			stdio: "inherit",
+		});
+		s.stop("shadcn/ui components generated.");
+	} catch (error) {
+		s.stop("shadcn/ui component generation failed.");
+		throw error;
+	}
+
+	await localizeShadcnPortals(projectDir);
+	return true;
+}
+
+async function localizeShadcnPortals(projectDir: string): Promise<void> {
+	const componentsDir = path.join(projectDir, "src", "components", "ui");
+	if (!(await fs.pathExists(componentsDir))) {
+		return;
+	}
+
+	const entries = await fs.readdir(componentsDir, { withFileTypes: true });
+
+	for (const entry of entries) {
+		if (!entry.isFile() || !entry.name.endsWith(".tsx")) {
+			continue;
+		}
+
+		const filePath = path.join(componentsDir, entry.name);
+		const source = await fs.readFile(filePath, "utf8");
+		const updated = withGeneratedShadcnCompatibility(
+			withEcPortalContainers(source, filePath),
+		);
+
+		if (updated !== source) {
+			await fs.writeFile(filePath, updated, "utf8");
+		}
+	}
+}
+
+function withEcPortalContainers(source: string, filePath: string): string {
+	const withPortalContainers = source.replace(
+		/<([A-Za-z][A-Za-z0-9]*Primitive)\.Portal\b(?![^>]*\bcontainer=)/g,
+		"<$1.Portal container={portalContainer ?? undefined}",
+	);
+
+	if (withPortalContainers === source) {
+		return source;
+	}
+
+	return addEcPortalImport(
+		addEcPortalHookDeclarations(withPortalContainers, filePath),
+	);
+}
+
+function withGeneratedShadcnCompatibility(source: string): string {
+	const withChartAttributeSelectors = source
+		.replace(/\[stroke=#ccc\]/g, "[stroke='#ccc']")
+		.replace(/\[stroke=#fff\]/g, "[stroke='#fff']")
+		.replace(
+			/"cn-input-otp flex items-center has-disabled:opacity-50"/g,
+			'"cn-input-otp ec:flex ec:items-center ec:has-disabled:opacity-50"',
+		)
+		.replace(/String\.raw`rtl:/g, "String.raw`ec:rtl:");
+
+	if (!withChartAttributeSelectors.includes('from "react-day-picker"')) {
+		return withChartAttributeSelectors;
+	}
+
+	return withChartAttributeSelectors.replace(/(\n\s*)table:/g, "$1month_grid:");
+}
+
+function addEcPortalImport(source: string): string {
+	if (source.includes('from "@/runtime/EcAppShell"')) {
+		return source;
+	}
+
+	const importPattern =
+		/import[\s\S]*?from\s+["'][^"']+["'];?\n|import\s+["'][^"']+["'];?\n/g;
+	let insertAt = 0;
+	for (const match of source.matchAll(importPattern)) {
+		insertAt = (match.index ?? 0) + match[0].length;
+	}
+
+	const importLine =
+		'import { useEcPortalContainer } from "@/runtime/EcAppShell"\n';
+
+	return `${source.slice(0, insertAt)}${importLine}${source.slice(insertAt)}`;
+}
+
+function addEcPortalHookDeclarations(source: string, filePath: string): string {
+	const lines = source.split("\n");
+	const hookBodyLines = new Set<number>();
+
+	for (let index = 0; index < lines.length; index += 1) {
+		if (!lines[index]?.includes("container={portalContainer ?? undefined}")) {
+			continue;
+		}
+
+		const bodyLine = findContainingFunctionBodyLine(lines, index);
+		if (bodyLine === undefined) {
+			throw new Error(
+				`Could not locate a function body for a shadcn Portal in ${filePath}.`,
+			);
+		}
+
+		hookBodyLines.add(bodyLine);
+	}
+
+	for (const bodyLine of [...hookBodyLines].sort((a, b) => b - a)) {
+		if (lines[bodyLine + 1]?.includes("const portalContainer")) {
+			continue;
+		}
+
+		const indent = lines[bodyLine]?.match(/^(\s*)/)?.[1] ?? "";
+		lines.splice(
+			bodyLine + 1,
+			0,
+			`${indent}  const portalContainer = useEcPortalContainer()`,
+		);
+	}
+
+	return lines.join("\n");
+}
+
+function findContainingFunctionBodyLine(
+	lines: string[],
+	portalLine: number,
+): number | undefined {
+	for (let index = portalLine; index >= 0; index -= 1) {
+		if (!/^\s*function\s+\w+/.test(lines[index] ?? "")) {
+			continue;
+		}
+
+		for (
+			let bodyLine = index;
+			bodyLine <= portalLine;
+			bodyLine += 1
+		) {
+			if (/\)\s*\{\s*$/.test(lines[bodyLine] ?? "")) {
+				return bodyLine;
+			}
+		}
+	}
+
+	return undefined;
 }
 
 main().catch((err) => {

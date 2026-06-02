@@ -23,9 +23,11 @@ export interface PcfRuntimeContext {
 }
 `;
 
-const APP_SHELL_TEMPLATE = `import * as React from "react";
+function createAppShellTemplate(appId: string) {
+	return `import * as React from "react";
 
 export const EC_APP_SCOPE_CLASS = "ec-app";
+export const EC_APP_ID = ${JSON.stringify(appId)};
 export const EC_PCF_SCOPE_CLASS = "ec-pcf-shell-control";
 
 const EcPortalContainerContext = React.createContext<HTMLElement | null>(null);
@@ -39,7 +41,11 @@ export function EcAppShell({ children }: { children: React.ReactNode }) {
 \t\tReact.useState<HTMLDivElement | null>(null);
 
 \treturn (
-\t\t<div className={EC_APP_SCOPE_CLASS} data-ec-app-root="">
+\t\t<div
+\t\t\tclassName={EC_APP_SCOPE_CLASS}
+\t\t\tdata-ec-app-id={EC_APP_ID}
+\t\t\tdata-ec-app-root=""
+\t\t>
 \t\t\t<EcPortalContainerContext.Provider value={portalContainer}>
 \t\t\t\t{children}
 \t\t\t\t<div data-ec-portal-root="" ref={setPortalContainer} />
@@ -48,6 +54,7 @@ export function EcAppShell({ children }: { children: React.ReactNode }) {
 \t);
 }
 `;
+}
 
 export interface PcfCliOptions {
 	pcfDir: string;
@@ -130,7 +137,7 @@ export async function generatePcfFromExistingWebresource(
 	);
 
 	await ensureRuntimeTypes(projectDir);
-	await ensureAppShell(projectDir);
+	await ensureAppShell(projectDir, packageName);
 	await warnIfCssAppearsUnsafe(path.join(projectDir, distDirName, "main.css"));
 
 	await fs.remove(outputDir);
@@ -180,14 +187,14 @@ async function ensureRuntimeTypes(projectDir: string): Promise<void> {
 	await fs.writeFile(runtimeTypesPath, RUNTIME_TYPES_TEMPLATE, "utf8");
 }
 
-async function ensureAppShell(projectDir: string): Promise<void> {
+async function ensureAppShell(projectDir: string, appId: string): Promise<void> {
 	const appShellPath = path.join(projectDir, "src", "runtime", "EcAppShell.tsx");
 	if (await fs.pathExists(appShellPath)) {
 		return;
 	}
 
 	await fs.ensureDir(path.dirname(appShellPath));
-	await fs.writeFile(appShellPath, APP_SHELL_TEMPLATE, "utf8");
+	await fs.writeFile(appShellPath, createAppShellTemplate(appId), "utf8");
 }
 
 async function warnIfCssAppearsUnsafe(cssPath: string): Promise<void> {
