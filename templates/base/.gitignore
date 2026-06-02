@@ -91,3 +91,6 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Token
+token.json

@@ -302,32 +302,11 @@ npm install
 npm run build
 ```
 
-Useful options:
-
-- `--dist dist` to point at a different build folder
-- `--output pcf/MyControl` to choose the target folder
-- `--template /path/to/create-ec-app/templates/pcf/base` to swap the base shell
-- `--layer path/to/layer` to apply one or more patch layers after the base copy
-
-Build the generated PCF project from inside the generated folder:
-
-```bash
-cd pcf/FusionNotebookHost
-npm install
-npm run build
-```
-
 What gets generated:
 
 - a minimal PCF wrapper project under `pcf/<ConstructorName>`
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
 - direct imports back to your webresource source and built CSS
-
-What does not happen:
-
-- your existing webresource project is not converted in place
-- your React source is not moved into the PCF project
-- the generated PCF project does not automatically get added to a Dataverse solution
 
 ## Notes
 
