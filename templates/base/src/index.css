@@ -1,3 +1,6 @@
-@import "tailwindcss";
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme) prefix(ec);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(ec);
 
 @custom-variant hover (&:hover);

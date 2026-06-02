@@ -5,8 +5,7 @@ import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
 
-// Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: "", dark: ".dark" } as const
+const THEMES = ["light", "dark"] as const
 
 export type ChartConfig = {
   [k in string]: {
@@ -55,7 +54,7 @@ function ChartContainer({
         data-slot="chart"
         data-chart={chartId}
         className={cn(
-          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "ec:[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground ec:[&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 ec:[&_.recharts-curve.recharts-tooltip-cursor]:stroke-border ec:[&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border ec:[&_.recharts-radial-bar-background-sector]:fill-muted ec:[&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted ec:[&_.recharts-reference-line_[stroke='#ccc']]:stroke-border ec:flex ec:aspect-video ec:justify-center ec:text-xs ec:[&_.recharts-dot[stroke='#fff']]:stroke-transparent ec:[&_.recharts-layer]:outline-hidden ec:[&_.recharts-sector]:outline-hidden ec:[&_.recharts-sector[stroke='#fff']]:stroke-transparent ec:[&_.recharts-surface]:outline-hidden",
           className
         )}
         {...props}
@@ -81,10 +80,10 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
+        __html: THEMES
           .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+            (theme) => `
+${getChartThemeSelector(theme, id)} {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color =
@@ -100,6 +99,14 @@ ${colorConfig
       }}
     />
   )
+}
+
+function getChartThemeSelector(theme: (typeof THEMES)[number], id: string) {
+  if (theme === "dark") {
+    return `.ec-app.dark [data-chart=${id}], .ec-app .dark [data-chart=${id}]`
+  }
+
+  return `.ec-app [data-chart=${id}]`
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip
@@ -143,7 +150,7 @@ function ChartTooltipContent({
 
     if (labelFormatter) {
       return (
-        <div className={cn("font-medium", labelClassName)}>
+        <div className={cn("ec:font-medium", labelClassName)}>
           {labelFormatter(value, payload)}
         </div>
       )
@@ -153,7 +160,7 @@ function ChartTooltipContent({
       return null
     }
 
-    return <div className={cn("font-medium", labelClassName)}>{value}</div>
+    return <div className={cn("ec:font-medium", labelClassName)}>{value}</div>
   }, [
     label,
     labelFormatter,
@@ -173,12 +180,12 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+        "ec:border-border/50 ec:bg-background ec:grid ec:min-w-[8rem] ec:items-start ec:gap-1.5 ec:rounded-lg ec:border ec:px-2.5 ec:py-1.5 ec:text-xs ec:shadow-xl",
         className
       )}
     >
       {!nestLabel ? tooltipLabel : null}
-      <div className="grid gap-1.5">
+      <div className="ec:grid ec:gap-1.5">
         {payload
           .filter((item) => item.type !== "none")
           .map((item, index) => {
@@ -190,8 +197,8 @@ function ChartTooltipContent({
               <div
                 key={item.dataKey}
                 className={cn(
-                  "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
-                  indicator === "dot" && "items-center"
+                  "ec:[&>svg]:text-muted-foreground ec:flex ec:w-full ec:flex-wrap ec:items-stretch ec:gap-2 ec:[&>svg]:h-2.5 ec:[&>svg]:w-2.5",
+                  indicator === "dot" && "ec:items-center"
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
@@ -204,13 +211,13 @@ function ChartTooltipContent({
                       !hideIndicator && (
                         <div
                           className={cn(
-                            "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
+                            "ec:shrink-0 ec:rounded-[2px] ec:border-(--color-border) ec:bg-(--color-bg)",
                             {
-                              "h-2.5 w-2.5": indicator === "dot",
-                              "w-1": indicator === "line",
-                              "w-0 border-[1.5px] border-dashed bg-transparent":
+                              "ec:h-2.5 ec:w-2.5": indicator === "dot",
+                              "ec:w-1": indicator === "line",
+                              "ec:w-0 ec:border-[1.5px] ec:border-dashed ec:bg-transparent":
                                 indicator === "dashed",
-                              "my-0.5": nestLabel && indicator === "dashed",
+                              "ec:my-0.5": nestLabel && indicator === "dashed",
                             }
                           )}
                           style={
@@ -224,18 +231,18 @@ function ChartTooltipContent({
                     )}
                     <div
                       className={cn(
-                        "flex flex-1 justify-between leading-none",
-                        nestLabel ? "items-end" : "items-center"
+                        "ec:flex ec:flex-1 ec:justify-between ec:leading-none",
+                        nestLabel ? "ec:items-end" : "ec:items-center"
                       )}
                     >
-                      <div className="grid gap-1.5">
+                      <div className="ec:grid ec:gap-1.5">
                         {nestLabel ? tooltipLabel : null}
-                        <span className="text-muted-foreground">
+                        <span className="ec:text-muted-foreground">
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
                       {item.value && (
-                        <span className="text-foreground font-mono font-medium tabular-nums">
+                        <span className="ec:text-foreground ec:font-mono ec:font-medium ec:tabular-nums">
                           {item.value.toLocaleString()}
                         </span>
                       )}
@@ -272,8 +279,8 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-4",
-        verticalAlign === "top" ? "pb-3" : "pt-3",
+        "ec:flex ec:items-center ec:justify-center ec:gap-4",
+        verticalAlign === "top" ? "ec:pb-3" : "ec:pt-3",
         className
       )}
     >
@@ -287,14 +294,14 @@ function ChartLegendContent({
             <div
               key={item.value}
               className={cn(
-                "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
+                "ec:[&>svg]:text-muted-foreground ec:flex ec:items-center ec:gap-1.5 ec:[&>svg]:h-3 ec:[&>svg]:w-3"
               )}
             >
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  className="ec:h-2 ec:w-2 ec:shrink-0 ec:rounded-[2px]"
                   style={{
                     backgroundColor: item.color,
                   }}

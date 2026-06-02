@@ -8,9 +8,9 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        "ec:file:text-foreground ec:placeholder:text-muted-foreground ec:selection:bg-primary ec:selection:text-primary-foreground ec:dark:bg-input/30 ec:border-input ec:h-9 ec:w-full ec:min-w-0 ec:rounded-md ec:border ec:bg-transparent ec:px-3 ec:py-1 ec:text-base ec:shadow-xs ec:transition-[color,box-shadow] ec:outline-none ec:file:inline-flex ec:file:h-7 ec:file:border-0 ec:file:bg-transparent ec:file:text-sm ec:file:font-medium ec:disabled:pointer-events-none ec:disabled:cursor-not-allowed ec:disabled:opacity-50 ec:md:text-sm",
+        "ec:focus-visible:border-ring ec:focus-visible:ring-ring/50 ec:focus-visible:ring-[3px]",
+        "ec:aria-invalid:ring-destructive/20 ec:dark:aria-invalid:ring-destructive/40 ec:aria-invalid:border-destructive",
         className
       )}
       {...props}

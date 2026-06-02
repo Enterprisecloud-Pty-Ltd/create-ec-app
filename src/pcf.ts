@@ -23,6 +23,32 @@ export interface PcfRuntimeContext {
 }
 `;
 
+const APP_SHELL_TEMPLATE = `import * as React from "react";
+
+export const EC_APP_SCOPE_CLASS = "ec-app";
+export const EC_PCF_SCOPE_CLASS = "ec-pcf-shell-control";
+
+const EcPortalContainerContext = React.createContext<HTMLElement | null>(null);
+
+export function useEcPortalContainer() {
+\treturn React.useContext(EcPortalContainerContext);
+}
+
+export function EcAppShell({ children }: { children: React.ReactNode }) {
+\tconst [portalContainer, setPortalContainer] =
+\t\tReact.useState<HTMLDivElement | null>(null);
+
+\treturn (
+\t\t<div className={EC_APP_SCOPE_CLASS} data-ec-app-root="">
+\t\t\t<EcPortalContainerContext.Provider value={portalContainer}>
+\t\t\t\t{children}
+\t\t\t\t<div data-ec-portal-root="" ref={setPortalContainer} />
+\t\t\t</EcPortalContainerContext.Provider>
+\t\t</div>
+\t);
+}
+`;
+
 export interface PcfCliOptions {
 	pcfDir: string;
 	controlConstructor?: string | undefined;
@@ -78,6 +104,11 @@ export async function generatePcfFromExistingWebresource(
 	const appImportPath = ensureRelativeImport(
 		toPosixPath(path.relative(outputDir, path.join(projectDir, "src", "App"))),
 	);
+	const appShellImportPath = ensureRelativeImport(
+		toPosixPath(
+			path.relative(outputDir, path.join(projectDir, "src", "runtime", "EcAppShell")),
+		),
+	);
 	const runtimeTypesImportPath = ensureRelativeImport(
 		toPosixPath(
 			path.relative(outputDir, path.join(projectDir, "src", "runtime", "types")),
@@ -99,6 +130,8 @@ export async function generatePcfFromExistingWebresource(
 	);
 
 	await ensureRuntimeTypes(projectDir);
+	await ensureAppShell(projectDir);
+	await warnIfCssAppearsUnsafe(path.join(projectDir, distDirName, "main.css"));
 
 	await fs.remove(outputDir);
 	await applyLayer(templateDir, outputDir);
@@ -115,6 +148,7 @@ export async function generatePcfFromExistingWebresource(
 		PCF_VERSION: version,
 		PROJECT_APP_IMPORT: appImportPath,
 		PROJECT_CSS_IMPORT: cssImportPath,
+		PROJECT_EC_APP_SHELL_IMPORT: appShellImportPath,
 		PROJECT_NODE_MODULES_TYPES_ROOT: `${relToProject}/node_modules/@types`,
 		PROJECT_REACT_ALIAS: `${relToProject}/node_modules/react`,
 		PROJECT_REACT_DOM_ALIAS: `${relToProject}/node_modules/react-dom`,
@@ -144,6 +178,59 @@ async function ensureRuntimeTypes(projectDir: string): Promise<void> {
 
 	await fs.ensureDir(path.dirname(runtimeTypesPath));
 	await fs.writeFile(runtimeTypesPath, RUNTIME_TYPES_TEMPLATE, "utf8");
+}
+
+async function ensureAppShell(projectDir: string): Promise<void> {
+	const appShellPath = path.join(projectDir, "src", "runtime", "EcAppShell.tsx");
+	if (await fs.pathExists(appShellPath)) {
+		return;
+	}
+
+	await fs.ensureDir(path.dirname(appShellPath));
+	await fs.writeFile(appShellPath, APP_SHELL_TEMPLATE, "utf8");
+}
+
+async function warnIfCssAppearsUnsafe(cssPath: string): Promise<void> {
+	const css = await fs.readFile(cssPath, "utf8");
+	const unsafeChecks: Array<{ name: string; pattern: RegExp }> = [
+		{ name: "global body rule", pattern: /(^|})\s*body\s*\{/ },
+		{
+			name: "global shadcn :root token rule",
+			pattern: /(^|})\s*:root\s*\{[^}]*--background\s*:/,
+		},
+		{
+			name: "global shadcn dark token rule",
+			pattern: /(^|})\s*\.dark\s*\{[^}]*--background\s*:/,
+		},
+		{
+			name: "Tailwind Preflight universal reset",
+			pattern: /(^|})\s*\*,\s*::before,\s*::after,\s*::backdrop\b/,
+		},
+		{ name: "unprefixed flex utility", pattern: /(^|})\s*\.flex\s*\{/ },
+		{ name: "unprefixed grid utility", pattern: /(^|})\s*\.grid\s*\{/ },
+		{ name: "unprefixed hidden utility", pattern: /(^|})\s*\.hidden\s*\{/ },
+		{ name: "unprefixed border utility", pattern: /(^|})\s*\.border\s*\{/ },
+		{ name: "unprefixed text-sm utility", pattern: /(^|})\s*\.text-sm\s*\{/ },
+		{
+			name: "unprefixed bg-background utility",
+			pattern: /(^|})\s*\.bg-background\s*\{/,
+		},
+	];
+	const matches = unsafeChecks
+		.filter((check) => check.pattern.test(css))
+		.map((check) => check.name);
+
+	if (matches.length === 0) {
+		return;
+	}
+
+	console.warn(
+		[
+			"Warning: the built CSS appears to use unscoped Tailwind/shadcn styles and may leak into the host page when deployed as PCF.",
+			`Detected: ${matches.join(", ")}.`,
+			"Regenerate or migrate the source app to the scoped CSS template before deploying to Dynamics 365.",
+		].join("\n"),
+	);
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown> | null> {

@@ -11,16 +11,17 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
+  // Sonner 2.0.7 renders in place and does not expose a portal container prop.
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      className="toaster ec:group"
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+        success: <CircleCheckIcon className="ec:size-4" />,
+        info: <InfoIcon className="ec:size-4" />,
+        warning: <TriangleAlertIcon className="ec:size-4" />,
+        error: <OctagonXIcon className="ec:size-4" />,
+        loading: <Loader2Icon className="ec:size-4 ec:animate-spin" />,
       }}
       style={
         {

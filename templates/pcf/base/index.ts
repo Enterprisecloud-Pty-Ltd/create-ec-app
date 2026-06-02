@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "{{PROJECT_APP_IMPORT}}";
 import "{{PROJECT_CSS_IMPORT}}";
+import { EcAppShell } from "{{PROJECT_EC_APP_SHELL_IMPORT}}";
 import type { IInputs, IOutputs } from "./control/generated/ManifestTypes";
 import type {
 	PcfRuntimeContext,
@@ -112,6 +113,7 @@ export class {{PCF_CONSTRUCTOR}}
 		container: HTMLDivElement,
 	): void {
 		container.classList.add("ec-pcf-shell-control");
+		container.dataset.ecPcfControl = "{{PCF_CONSTRUCTOR}}";
 		this.runtime = createRuntime(context);
 		this.root = createRoot(container);
 		this.render();
@@ -142,9 +144,13 @@ export class {{PCF_CONSTRUCTOR}}
 				StrictMode,
 				null,
 				React.createElement(
-					QueryClientProvider,
-					{ client: this.queryClient },
-					React.createElement(App, { runtime: this.runtime }),
+					EcAppShell,
+					null,
+					React.createElement(
+						QueryClientProvider,
+						{ client: this.queryClient },
+						React.createElement(App, { runtime: this.runtime }),
+					),
 				),
 			),
 		);

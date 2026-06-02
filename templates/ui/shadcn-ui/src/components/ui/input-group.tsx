@@ -14,20 +14,20 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="input-group"
       role="group"
       className={cn(
-        "group/input-group border-input dark:bg-input/30 relative flex w-full items-center rounded-md border shadow-xs transition-[color,box-shadow] outline-none",
-        "h-9 min-w-0 has-[>textarea]:h-auto",
+        "ec:group/input-group ec:border-input ec:dark:bg-input/30 ec:relative ec:flex ec:w-full ec:items-center ec:rounded-md ec:border ec:shadow-xs ec:transition-[color,box-shadow] ec:outline-none",
+        "ec:h-9 ec:min-w-0 ec:has-[>textarea]:h-auto",
 
         // Variants based on alignment.
-        "has-[>[data-align=inline-start]]:[&>input]:pl-2",
-        "has-[>[data-align=inline-end]]:[&>input]:pr-2",
-        "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-3",
-        "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-3",
+        "ec:has-[>[data-align=inline-start]]:[&>input]:pl-2",
+        "ec:has-[>[data-align=inline-end]]:[&>input]:pr-2",
+        "ec:has-[>[data-align=block-start]]:h-auto ec:has-[>[data-align=block-start]]:flex-col ec:has-[>[data-align=block-start]]:[&>input]:pb-3",
+        "ec:has-[>[data-align=block-end]]:h-auto ec:has-[>[data-align=block-end]]:flex-col ec:has-[>[data-align=block-end]]:[&>input]:pt-3",
 
         // Focus state.
-        "has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
+        "ec:has-[[data-slot=input-group-control]:focus-visible]:border-ring ec:has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 ec:has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]",
 
         // Error state.
-        "has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
+        "ec:has-[[data-slot][aria-invalid=true]]:ring-destructive/20 ec:has-[[data-slot][aria-invalid=true]]:border-destructive ec:dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
 
         className
       )}
@@ -37,18 +37,18 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const inputGroupAddonVariants = cva(
-  "text-muted-foreground flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50",
+  "ec:text-muted-foreground ec:flex ec:h-auto ec:cursor-text ec:items-center ec:justify-center ec:gap-2 ec:py-1.5 ec:text-sm ec:font-medium ec:select-none ec:[&>svg:not([class*='size-'])]:size-4 ec:[&>kbd]:rounded-[calc(var(--radius)-5px)] ec:group-data-[disabled=true]/input-group:opacity-50",
   {
     variants: {
       align: {
         "inline-start":
-          "order-first pl-3 has-[>button]:ml-[-0.45rem] has-[>kbd]:ml-[-0.35rem]",
+          "ec:order-first ec:pl-3 ec:has-[>button]:ml-[-0.45rem] ec:has-[>kbd]:ml-[-0.35rem]",
         "inline-end":
-          "order-last pr-3 has-[>button]:mr-[-0.45rem] has-[>kbd]:mr-[-0.35rem]",
+          "ec:order-last ec:pr-3 ec:has-[>button]:mr-[-0.45rem] ec:has-[>kbd]:mr-[-0.35rem]",
         "block-start":
-          "order-first w-full justify-start px-3 pt-3 [.border-b]:pb-3 group-has-[>input]/input-group:pt-2.5",
+          "ec:order-first ec:w-full ec:justify-start ec:px-3 ec:pt-3 ec:[.border-b]:pb-3 ec:group-has-[>input]/input-group:pt-2.5",
         "block-end":
-          "order-last w-full justify-start px-3 pb-3 [.border-t]:pt-3 group-has-[>input]/input-group:pb-2.5",
+          "ec:order-last ec:w-full ec:justify-start ec:px-3 ec:pb-3 ec:[.border-t]:pt-3 ec:group-has-[>input]/input-group:pb-2.5",
       },
     },
     defaultVariants: {
@@ -80,15 +80,15 @@ function InputGroupAddon({
 }
 
 const inputGroupButtonVariants = cva(
-  "text-sm shadow-none flex gap-2 items-center",
+  "ec:text-sm ec:shadow-none ec:flex ec:gap-2 ec:items-center",
   {
     variants: {
       size: {
-        xs: "h-6 gap-1 px-2 rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-        sm: "h-8 px-2.5 gap-1.5 rounded-md has-[>svg]:px-2.5",
+        xs: "ec:h-6 ec:gap-1 ec:px-2 ec:rounded-[calc(var(--radius)-5px)] ec:[&>svg:not([class*='size-'])]:size-3.5 ec:has-[>svg]:px-2",
+        sm: "ec:h-8 ec:px-2.5 ec:gap-1.5 ec:rounded-md ec:has-[>svg]:px-2.5",
         "icon-xs":
-          "size-6 rounded-[calc(var(--radius)-5px)] p-0 has-[>svg]:p-0",
-        "icon-sm": "size-8 p-0 has-[>svg]:p-0",
+          "ec:size-6 ec:rounded-[calc(var(--radius)-5px)] ec:p-0 ec:has-[>svg]:p-0",
+        "icon-sm": "ec:size-8 ec:p-0 ec:has-[>svg]:p-0",
       },
     },
     defaultVariants: {
@@ -120,7 +120,7 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       className={cn(
-        "text-muted-foreground flex items-center gap-2 text-sm [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+        "ec:text-muted-foreground ec:flex ec:items-center ec:gap-2 ec:text-sm ec:[&_svg]:pointer-events-none ec:[&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -136,7 +136,7 @@ function InputGroupInput({
     <Input
       data-slot="input-group-control"
       className={cn(
-        "flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent",
+        "ec:flex-1 ec:rounded-none ec:border-0 ec:bg-transparent ec:shadow-none ec:focus-visible:ring-0 ec:dark:bg-transparent",
         className
       )}
       {...props}
@@ -152,7 +152,7 @@ function InputGroupTextarea({
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        "flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent",
+        "ec:flex-1 ec:resize-none ec:rounded-none ec:border-0 ec:bg-transparent ec:py-3 ec:shadow-none ec:focus-visible:ring-0 ec:dark:bg-transparent",
         className
       )}
       {...props}

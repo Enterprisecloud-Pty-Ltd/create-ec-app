@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./index.css";
 import App from "./App.tsx";
+import { EcAppShell } from "./runtime/EcAppShell.tsx";
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -23,7 +24,9 @@ const root = createRoot(document.getElementById("root")!);
 root.render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
-			<App />
+			<EcAppShell>
+				<App />
+			</EcAppShell>
 		</QueryClientProvider>
 	</StrictMode>
 );

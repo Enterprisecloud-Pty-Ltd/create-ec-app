@@ -412,6 +412,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@progress/kendo-theme-fluent/dist/all.css";
 import "./index.css";
 import App from "./App.tsx";
+import { EcAppShell } from "./runtime/EcAppShell.tsx";
 
 import { AuthProvider } from "./context/AuthContext.tsx";
 
@@ -434,7 +435,9 @@ root.render(
     <StrictMode>
         <AuthProvider>
             <QueryClientProvider client={queryClient}>
-                <App />
+                <EcAppShell>
+                    <App />
+                </EcAppShell>
             </QueryClientProvider>
         </AuthProvider>
     </StrictMode>

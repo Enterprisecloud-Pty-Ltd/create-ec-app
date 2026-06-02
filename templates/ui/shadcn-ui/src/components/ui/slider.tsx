@@ -31,7 +31,7 @@ function Slider({
       min={min}
       max={max}
       className={cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
+        "ec:relative ec:flex ec:w-full ec:touch-none ec:items-center ec:select-none ec:data-[disabled]:opacity-50 ec:data-[orientation=vertical]:h-full ec:data-[orientation=vertical]:min-h-44 ec:data-[orientation=vertical]:w-auto ec:data-[orientation=vertical]:flex-col",
         className
       )}
       {...props}
@@ -39,13 +39,13 @@ function Slider({
       <SliderPrimitive.Track
         data-slot="slider-track"
         className={cn(
-          "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+          "ec:bg-muted ec:relative grow ec:overflow-hidden ec:rounded-full ec:data-[orientation=horizontal]:h-1.5 ec:data-[orientation=horizontal]:w-full ec:data-[orientation=vertical]:h-full ec:data-[orientation=vertical]:w-1.5"
         )}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
           className={cn(
-            "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+            "ec:bg-primary ec:absolute ec:data-[orientation=horizontal]:h-full ec:data-[orientation=vertical]:w-full"
           )}
         />
       </SliderPrimitive.Track>
@@ -53,7 +53,7 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="border-primary ring-ring/50 block size-4 shrink-0 rounded-full border bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          className="ec:border-primary ec:ring-ring/50 ec:block ec:size-4 ec:shrink-0 ec:rounded-full ec:border ec:bg-white ec:shadow-sm ec:transition-[color,box-shadow] ec:hover:ring-4 ec:focus-visible:ring-4 ec:focus-visible:outline-hidden ec:disabled:pointer-events-none ec:disabled:opacity-50"
         />
       ))}
     </SliderPrimitive.Root>

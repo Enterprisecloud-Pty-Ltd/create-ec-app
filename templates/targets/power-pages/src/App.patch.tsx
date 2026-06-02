@@ -4,7 +4,7 @@ function App() {
 	const { isAuthenticated, user } = useAuth(); //INFO: User is where the token information is stored (user?.idToken)
 
 	return (
-		<div className="flex flex-col items-center justify-center h-screen gap-4">
+		<div className="ec:flex ec:flex-col ec:items-center ec:justify-center ec:h-screen ec:gap-4">
 			{isAuthenticated ? (
 				<div>You are logged in</div>
 			) : (

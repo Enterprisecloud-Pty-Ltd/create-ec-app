@@ -8,6 +8,7 @@
 	"scripts": {
 		"dev": "tsx src/index.ts",
 		"build": "tsc -p tsconfig.json",
+		"check:css-scope": "node scripts/check-generated-css-scope.mjs",
 		"test": "node bin/index.js test-app",
 		"release": "semantic-release",
 		"prepublishOnly": "npm run build"
@@ -30,6 +31,7 @@
 	"files": [
 		"dist/**/*",
 		"bin/**/*",
+		"scripts/**/*",
 		"templates/**/*"
 	],
 	"author": "Schalk Conradie",

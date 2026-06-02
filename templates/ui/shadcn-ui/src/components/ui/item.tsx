@@ -10,7 +10,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       role="list"
       data-slot="item-group"
-      className={cn("group/item-group flex flex-col", className)}
+      className={cn("ec:group/item-group ec:flex ec:flex-col", className)}
       {...props}
     />
   )
@@ -24,24 +24,24 @@ function ItemSeparator({
     <Separator
       data-slot="item-separator"
       orientation="horizontal"
-      className={cn("my-0", className)}
+      className={cn("ec:my-0", className)}
       {...props}
     />
   )
 }
 
 const itemVariants = cva(
-  "group/item flex items-center border border-transparent text-sm rounded-md transition-colors [a]:hover:bg-accent/50 [a]:transition-colors duration-100 flex-wrap outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+  "ec:group/item ec:flex ec:items-center ec:border ec:border-transparent ec:text-sm ec:rounded-md ec:transition-colors ec:[a]:hover:bg-accent/50 ec:[a]:transition-colors ec:duration-100 ec:flex-wrap ec:outline-none ec:focus-visible:border-ring ec:focus-visible:ring-ring/50 ec:focus-visible:ring-[3px]",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        outline: "border-border",
-        muted: "bg-muted/50",
+        default: "ec:bg-transparent",
+        outline: "ec:border-border",
+        muted: "ec:bg-muted/50",
       },
       size: {
-        default: "p-4 gap-4 ",
-        sm: "py-3 px-4 gap-2.5",
+        default: "ec:p-4 ec:gap-4 ",
+        sm: "ec:py-3 ec:px-4 ec:gap-2.5",
       },
     },
     defaultVariants: {
@@ -72,14 +72,14 @@ function Item({
 }
 
 const itemMediaVariants = cva(
-  "flex shrink-0 items-center justify-center gap-2 group-has-[[data-slot=item-description]]/item:self-start [&_svg]:pointer-events-none group-has-[[data-slot=item-description]]/item:translate-y-0.5",
+  "ec:flex ec:shrink-0 ec:items-center ec:justify-center ec:gap-2 ec:group-has-[[data-slot=item-description]]/item:self-start ec:[&_svg]:pointer-events-none ec:group-has-[[data-slot=item-description]]/item:translate-y-0.5",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        icon: "size-8 border rounded-sm bg-muted [&_svg:not([class*='size-'])]:size-4",
+        default: "ec:bg-transparent",
+        icon: "ec:size-8 ec:border ec:rounded-sm ec:bg-muted ec:[&_svg:not([class*='size-'])]:size-4",
         image:
-          "size-10 rounded-sm overflow-hidden [&_img]:size-full [&_img]:object-cover",
+          "ec:size-10 ec:rounded-sm ec:overflow-hidden ec:[&_img]:size-full ec:[&_img]:object-cover",
       },
     },
     defaultVariants: {
@@ -108,7 +108,7 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-content"
       className={cn(
-        "flex flex-1 flex-col gap-1 [&+[data-slot=item-content]]:flex-none",
+        "ec:flex ec:flex-1 ec:flex-col ec:gap-1 ec:[&+[data-slot=item-content]]:flex-none",
         className
       )}
       {...props}
@@ -121,7 +121,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-title"
       className={cn(
-        "flex w-fit items-center gap-2 text-sm leading-snug font-medium",
+        "ec:flex ec:w-fit ec:items-center ec:gap-2 ec:text-sm ec:leading-snug ec:font-medium",
         className
       )}
       {...props}
@@ -134,8 +134,8 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "text-muted-foreground line-clamp-2 text-sm leading-normal font-normal text-balance",
-        "[&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4",
+        "ec:text-muted-foreground ec:line-clamp-2 ec:text-sm ec:leading-normal ec:font-normal ec:text-balance",
+        "ec:[&>a:hover]:text-primary ec:[&>a]:underline ec:[&>a]:underline-offset-4",
         className
       )}
       {...props}
@@ -147,7 +147,7 @@ function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-actions"
-      className={cn("flex items-center gap-2", className)}
+      className={cn("ec:flex ec:items-center ec:gap-2", className)}
       {...props}
     />
   )
@@ -158,7 +158,7 @@ function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-header"
       className={cn(
-        "flex basis-full items-center justify-between gap-2",
+        "ec:flex ec:basis-full ec:items-center ec:justify-between ec:gap-2",
         className
       )}
       {...props}
@@ -171,7 +171,7 @@ function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-footer"
       className={cn(
-        "flex basis-full items-center justify-between gap-2",
+        "ec:flex ec:basis-full ec:items-center ec:justify-between ec:gap-2",
         className
       )}
       {...props}

@@ -1,8 +1,11 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme) prefix(ec);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(ec);
+@import "tw-animate-css/prefix";
 
 @custom-variant hover (&:hover);
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.ec-app.dark *, .ec-app .dark *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -42,7 +45,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-:root {
+.ec-app {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -75,9 +78,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  background: var(--background);
+  color: var(--foreground);
 }
 
-.dark {
+.ec-app.dark,
+.ec-app .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -112,10 +119,20 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+  :where(.ec-app, .ec-app *, .ec-app *::before, .ec-app *::after) {
+    box-sizing: border-box;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  :where(.ec-app *) {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  :where(.ec-app button, .ec-app input, .ec-app select, .ec-app textarea) {
+    font: inherit;
+  }
+
+  :where(.ec-app button:not(:disabled), .ec-app [role="button"]:not(:disabled)) {
+    cursor: pointer;
   }
 }
