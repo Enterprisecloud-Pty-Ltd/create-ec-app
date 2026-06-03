@@ -8,7 +8,65 @@ CLI for scaffolding Enterprisecloud React apps from layered templates.
 npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install
 ```
 
-Targets include `webresource`, `power-pages`, and `swa`. UI layers include `shadcn-ui` and `kendo`.
+Targets include `webresource`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
+
+## Power Apps Code Apps
+
+Use the `code-apps` target to scaffold a React + Vite app that keeps the EC base template and adds Microsoft Power Apps code app support:
+
+```bash
+npm run dev -- --project-name my-code-app --target code-apps --ui shadcn-ui --no-install
+```
+
+Compared with the base template, the Code Apps target adds:
+
+- `@microsoft/power-apps` for the Power Apps code app SDK and npm CLI
+- `@microsoft/power-apps-vite` for local Play URLs, Power Apps CORS settings, and `base: "./"` build output
+- `powerApps()` in `vite.config.ts` alongside the existing React, Tailwind, and `@` alias config
+
+Code Apps use the Power Apps host, `power.config.json`, and generated SDK services for Dataverse and connector access. They should not use the `webresource` target's `src/services/AuthService.ts` or `token.json` local bearer-token pattern, and the Code Apps scaffold removes those auth artifacts if they are present during generation.
+
+After scaffolding, initialize the app metadata and authenticate to your environment:
+
+```bash
+npm install
+npx power-apps init --display-name "My Code App" --environment-id <environment-id> --app-url http://localhost:5173
+```
+
+`power.config.json` is intentionally not scaffolded as a real file. Microsoft’s CLI creates it during `npx power-apps init` and refuses to initialize if one already exists. The target includes `power.config.example.json` so you can see the expected shape without blocking initialization.
+
+For local development, run:
+
+```bash
+npm run dev
+```
+
+Open the **Local Play** URL printed by the Power Apps Vite plugin in the same browser profile you use for your Power Platform tenant.
+
+To deploy:
+
+```bash
+npm run build
+npx power-apps push
+```
+
+`npx power-apps push` publishes a new version to the environment in `power.config.json` and returns a Power Apps URL when it succeeds. Microsoft still documents the older PAC CLI path (`pac code init`, `npm run build | pac code push`) for compatibility, but the npm CLI is the preferred path for new code app work.
+
+For ALM, use a non-default solution or set a preferred solution in the environment. With the PAC CLI path you can target a specific solution using:
+
+```bash
+pac code push --solutionName <solution-name>
+```
+
+The generated Code Apps README links to Microsoft's [overview](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/overview), [npm CLI quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/npm-quickstart), [architecture](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/architecture), and [ALM](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/alm) documentation.
+
+It also documents Microsoft’s Code Apps data model:
+
+- Dataverse table data sources through generated services under `src/generated`
+- Power Platform connector data sources with connection IDs or connection references
+- Environment-variable references for ALM-friendly dataset/table values
+- Dataverse actions/functions through `npx power-apps find-dataverse-api` and `npx power-apps add-dataverse-api`
+- Runtime context through `getContext` from `@microsoft/power-apps/app`
 
 ## shadcn/ui Generation
 

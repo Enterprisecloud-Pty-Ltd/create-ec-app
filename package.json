@@ -1,7 +1,7 @@
 {
 	"name": "create-ec-app",
 	"version": "0.0.13",
-	"description": "Unified CLI tool to create different types of EC applications: Webresource, Portal, Power Pages",
+	"description": "Unified CLI tool to create different types of EC applications: Webresource, Portal, Power Pages, Power Apps Code Apps",
 	"bin": {
 		"create-ec-app": "./dist/index.js"
 	},
@@ -20,6 +20,8 @@
 		"tailwind",
 		"cli",
 		"powerpages",
+		"code-apps",
+		"power-apps-code-apps",
 		"portal",
 		"webresource",
 		"dynamics",

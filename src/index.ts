@@ -18,7 +18,7 @@ import { generatePcfFromExistingWebresource } from "./pcf.js";
 
 const { execSync } = await import("node:child_process");
 
-type AppTarget = "webresource" | "portal" | "power-pages" | "swa";
+type AppTarget = "webresource" | "portal" | "power-pages" | "swa" | "code-apps";
 type UiTarget = "kendo" | "shadcn-ui";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -125,6 +125,10 @@ async function scaffoldProject({
 		await applyLayer(uiDir, projectDir);
 	}
 
+	if (target === "code-apps") {
+		await cleanupCodeAppsScaffold(projectDir);
+	}
+
 	await replaceTokensRecursively(projectDir, {
 		APP_NAME: projectName,
 		TARGET: target,
@@ -206,6 +210,33 @@ async function localizeShadcnPortals(projectDir: string): Promise<void> {
 		if (updated !== source) {
 			await fs.writeFile(filePath, updated, "utf8");
 		}
+	}
+}
+
+async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
+	const pathsToRemove = [
+		"token.json",
+		"src/services/AuthService.ts",
+		"src/services/authService.ts",
+		"src/context/AuthContext.tsx",
+	];
+
+	for (const relPath of pathsToRemove) {
+		await fs.remove(path.join(projectDir, relPath));
+	}
+
+	await removeDirIfEmpty(path.join(projectDir, "src", "services"));
+	await removeDirIfEmpty(path.join(projectDir, "src", "context"));
+}
+
+async function removeDirIfEmpty(dirPath: string): Promise<void> {
+	if (!(await fs.pathExists(dirPath))) {
+		return;
+	}
+
+	const entries = await fs.readdir(dirPath);
+	if (entries.length === 0) {
+		await fs.remove(dirPath);
 	}
 }
 
@@ -357,6 +388,7 @@ async function promptTarget(): Promise<AppTarget> {
 			{ label: "Portal (WIP)", value: "portal" },
 			{ label: "Static Web App", value: "swa" },
 			{ label: "Power Pages", value: "power-pages" },
+			{ label: "Power Apps Code App", value: "code-apps" },
 		],
 	});
 
@@ -486,13 +518,15 @@ function readTarget(argv: string[]): AppTarget | undefined {
 		["--portal", "portal"],
 		["--power-pages", "power-pages"],
 		["--swa", "swa"],
+		["--code-apps", "code-apps"],
+		["--code-app", "code-apps"],
 	];
 	const selected = targetFlags.filter(([flag]) => argv.includes(flag));
 	const targetValue = readStringOption(argv, "--target");
 
 	if (selected.length > 1 || (selected.length === 1 && targetValue)) {
 		throw new Error(
-			"Use only one target option: --webresource, --portal, --power-pages, --swa, or --target.",
+			"Use only one target option: --webresource, --portal, --power-pages, --swa, --code-apps, --code-app, or --target.",
 		);
 	}
 
@@ -509,7 +543,7 @@ function readTarget(argv: string[]): AppTarget | undefined {
 	}
 
 	throw new Error(
-		`Unsupported target "${targetValue}". Use webresource, portal, power-pages, or swa.`,
+		`Unsupported target "${targetValue}". Use webresource, portal, power-pages, swa, or code-apps.`,
 	);
 }
 
@@ -560,7 +594,7 @@ function readStringOption(argv: string[], name: string): string | undefined {
 }
 
 function isAppTarget(value: string): value is AppTarget {
-	return ["webresource", "portal", "power-pages", "swa"].includes(value);
+	return ["webresource", "portal", "power-pages", "swa", "code-apps"].includes(value);
 }
 
 function isUiTarget(value: string): value is UiTarget {

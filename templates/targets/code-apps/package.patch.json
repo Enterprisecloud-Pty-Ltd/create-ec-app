@@ -1,0 +1,8 @@
+{
+	"dependencies": {
+		"@microsoft/power-apps": "^1.1.9"
+	},
+	"devDependencies": {
+		"@microsoft/power-apps-vite": "^1.0.2"
+	}
+}
