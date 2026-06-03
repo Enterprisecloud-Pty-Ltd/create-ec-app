@@ -1,6 +1,10 @@
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "fs-extra";
+import {
+	PCF_SCOPED_CSS_FILE,
+	scopeCssVariablesForPcf,
+} from "./cssScope.js";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,12 +27,8 @@ export interface PcfRuntimeContext {
 }
 `;
 
-function createAppShellTemplate(appId: string) {
+function createAppShellTemplate() {
 	return `import * as React from "react";
-
-export const EC_APP_SCOPE_CLASS = "ec-app";
-export const EC_APP_ID = ${JSON.stringify(appId)};
-export const EC_PCF_SCOPE_CLASS = "ec-pcf-shell-control";
 
 const EcPortalContainerContext = React.createContext<HTMLElement | null>(null);
 
@@ -41,11 +41,7 @@ export function EcAppShell({ children }: { children: React.ReactNode }) {
 \t\tReact.useState<HTMLDivElement | null>(null);
 
 \treturn (
-\t\t<div
-\t\t\tclassName={EC_APP_SCOPE_CLASS}
-\t\t\tdata-ec-app-id={EC_APP_ID}
-\t\t\tdata-ec-app-root=""
-\t\t>
+\t\t<div data-ec-app-root="">
 \t\t\t<EcPortalContainerContext.Provider value={portalContainer}>
 \t\t\t\t{children}
 \t\t\t\t<div data-ec-portal-root="" ref={setPortalContainer} />
@@ -121,30 +117,31 @@ export async function generatePcfFromExistingWebresource(
 			path.relative(outputDir, path.join(projectDir, "src", "runtime", "types")),
 		),
 	);
-	const cssImportPath = ensureRelativeImport(
-		toPosixPath(
-			path.relative(outputDir, path.join(projectDir, distDirName, "main.css")),
-		),
-	);
+	const sourceCssPath = path.join(projectDir, distDirName, "main.css");
+	const cssImportPath = ensureRelativeImport(PCF_SCOPED_CSS_FILE);
 
 	await assertFileExists(
 		path.join(projectDir, "src", "App.tsx"),
 		`Could not find src/App.tsx in ${projectDir}.`,
 	);
 	await assertFileExists(
-		path.join(projectDir, distDirName, "main.css"),
+		sourceCssPath,
 		`Could not find ${distDirName}/main.css in ${projectDir}. Run the webresource build first.`,
 	);
 
 	await ensureRuntimeTypes(projectDir);
-	await ensureAppShell(projectDir, packageName);
-	await warnIfCssAppearsUnsafe(path.join(projectDir, distDirName, "main.css"));
+	await ensureAppShell(projectDir);
+	const pcfCss = scopeCssVariablesForPcf(
+		await fs.readFile(sourceCssPath, "utf8"),
+		constructorName,
+	);
 
 	await fs.remove(outputDir);
 	await applyLayer(templateDir, outputDir);
 	for (const layerDir of layerDirs) {
 		await applyLayer(layerDir, outputDir);
 	}
+	await fs.writeFile(path.join(outputDir, PCF_SCOPED_CSS_FILE), pcfCss, "utf8");
 
 	await replaceTokensRecursively(outputDir, {
 		CONTROL_DESCRIPTION: controlDescription,
@@ -187,57 +184,14 @@ async function ensureRuntimeTypes(projectDir: string): Promise<void> {
 	await fs.writeFile(runtimeTypesPath, RUNTIME_TYPES_TEMPLATE, "utf8");
 }
 
-async function ensureAppShell(projectDir: string, appId: string): Promise<void> {
+async function ensureAppShell(projectDir: string): Promise<void> {
 	const appShellPath = path.join(projectDir, "src", "runtime", "EcAppShell.tsx");
 	if (await fs.pathExists(appShellPath)) {
 		return;
 	}
 
 	await fs.ensureDir(path.dirname(appShellPath));
-	await fs.writeFile(appShellPath, createAppShellTemplate(appId), "utf8");
-}
-
-async function warnIfCssAppearsUnsafe(cssPath: string): Promise<void> {
-	const css = await fs.readFile(cssPath, "utf8");
-	const unsafeChecks: Array<{ name: string; pattern: RegExp }> = [
-		{ name: "global body rule", pattern: /(^|})\s*body\s*\{/ },
-		{
-			name: "global shadcn :root token rule",
-			pattern: /(^|})\s*:root\s*\{[^}]*--background\s*:/,
-		},
-		{
-			name: "global shadcn dark token rule",
-			pattern: /(^|})\s*\.dark\s*\{[^}]*--background\s*:/,
-		},
-		{
-			name: "Tailwind Preflight universal reset",
-			pattern: /(^|})\s*\*,\s*::before,\s*::after,\s*::backdrop\b/,
-		},
-		{ name: "unprefixed flex utility", pattern: /(^|})\s*\.flex\s*\{/ },
-		{ name: "unprefixed grid utility", pattern: /(^|})\s*\.grid\s*\{/ },
-		{ name: "unprefixed hidden utility", pattern: /(^|})\s*\.hidden\s*\{/ },
-		{ name: "unprefixed border utility", pattern: /(^|})\s*\.border\s*\{/ },
-		{ name: "unprefixed text-sm utility", pattern: /(^|})\s*\.text-sm\s*\{/ },
-		{
-			name: "unprefixed bg-background utility",
-			pattern: /(^|})\s*\.bg-background\s*\{/,
-		},
-	];
-	const matches = unsafeChecks
-		.filter((check) => check.pattern.test(css))
-		.map((check) => check.name);
-
-	if (matches.length === 0) {
-		return;
-	}
-
-	console.warn(
-		[
-			"Warning: the built CSS appears to use unscoped Tailwind/shadcn styles and may leak into the host page when deployed as PCF.",
-			`Detected: ${matches.join(", ")}.`,
-			"Regenerate or migrate the source app to the scoped CSS template before deploying to Dynamics 365.",
-		].join("\n"),
-	);
+	await fs.writeFile(appShellPath, createAppShellTemplate(), "utf8");
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown> | null> {

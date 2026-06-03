@@ -2,7 +2,7 @@ import "./App.css";
 
 function App() {
 	return (
-		<div className="ec:flex ec:flex-col ec:h-screen ec:items-center ec:justify-center">
+		<div className="flex h-screen flex-col items-center justify-center">
 			<p>Hello, world!</p>
 		</div>
 	);

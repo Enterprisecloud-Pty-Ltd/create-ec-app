@@ -40,7 +40,8 @@
 	"type": "module",
 	"dependencies": {
 		"@clack/prompts": "^0.11.0",
-		"fs-extra": "^11.3.2"
+		"fs-extra": "^11.3.2",
+		"postcss": "^8.5.15"
 	},
 	"devDependencies": {
 		"@semantic-release/commit-analyzer": "^13.0.1",

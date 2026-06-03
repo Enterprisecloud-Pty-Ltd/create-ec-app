@@ -76,7 +76,7 @@ The shadcn template does not vendor generated component files. During scaffoldin
 npx shadcn@latest add --all --yes --overwrite
 ```
 
-This keeps generated components aligned with the latest shadcn registry. The template `components.json` sets the Tailwind prefix to `ec`, which makes shadcn emit classes such as `ec:flex`.
+This keeps generated components aligned with the latest shadcn registry. The template leaves Tailwind utility names unprefixed so generated JSX and CSS stay close to the upstream shadcn output.
 
 Current shadcn projects also depend on the `shadcn` package at build time because `src/index.css` imports:
 
@@ -84,23 +84,22 @@ Current shadcn projects also depend on the `shadcn` package at build time becaus
 @import "shadcn/tailwind.css";
 ```
 
-That shared CSS defines shadcn's Tailwind v4 custom variants and utilities, including Radix/Base UI state and orientation variants used by controls such as sliders, accordions, scroll areas, menus, and sidebars. The app build resolves this import into `dist/main.css`; PCF wrappers then bundle that built CSS from the webresource project.
+That shared CSS defines shadcn's Tailwind v4 custom variants and utilities, including Radix/Base UI state and orientation variants used by controls such as sliders, accordions, scroll areas, menus, and sidebars. The app build resolves this import into `dist/main.css`.
 
 After generation, the CLI applies small compatibility fixes for app embedding:
 
 - Radix/Base UI portals render into the app-local portal root from `EcAppShell`.
-- shadcn theme selectors are scoped to `.ec-app[data-ec-app-id="<app-name>"]`.
 - Known generated selector issues are normalized so builds stay clean with current Vite/Tailwind.
 
 ## Style Scoping
 
-Every generated app is wrapped by `EcAppShell`:
+Generated apps use normal Tailwind/shadcn CSS by default. `EcAppShell` is still present, but its job is to provide an app-local portal root for Radix/Base UI overlays:
 
 ```tsx
-<div className="ec-app" data-ec-app-id="my-app" data-ec-app-root="">
+<div data-ec-app-root="">
 ```
 
-Tailwind utilities are prefixed, and shadcn theme tokens are scoped by `data-ec-app-id`. This allows multiple generated apps, including nested parent/child apps with different themes, to coexist without overriding each other's theme variables.
+When a webresource is converted into a PCF wrapper, the generator creates a local `pcf-scoped.css` file in the generated PCF project. That file is copied from the built `dist/main.css` with CSS custom-property rules rewritten under the PCF host selector, so shadcn/Tailwind theme variables stay inside that control without prefixing or scoping every utility selector.
 
 ## Template Updates
 
@@ -140,7 +139,7 @@ npm install
 This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
-- reuses the built stylesheet from `dist/main.css`
+- creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - creates `src/runtime/types.ts` only if that file does not already exist
 - provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
 - mounts your React app directly into the PCF container
@@ -160,7 +159,8 @@ What gets generated:
 
 - a minimal PCF wrapper project under `pcf/<ConstructorName>`
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
-- direct imports back to your webresource source and built CSS
+- direct imports back to your webresource source
+- a generated `pcf-scoped.css` file with CSS custom properties scoped to the PCF control
 
 What does not happen:
 
@@ -176,7 +176,7 @@ Useful checks before shipping template changes:
 npm run build
 npm audit --audit-level=moderate --prefix templates/base
 npm audit --audit-level=moderate --prefix templates/pcf/base
-node scripts/check-generated-css-scope.mjs <generated-app-path>
+node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-For shadcn changes, also generate a fresh app, run `npm run build`, and verify a nested parent/child fixture if the scoping model changed.
+For shadcn changes, also generate a fresh app, run `npm run build`, generate a PCF wrapper, and run the CSS scope check against the generated PCF folder.

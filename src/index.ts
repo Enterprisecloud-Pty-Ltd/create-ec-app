@@ -258,12 +258,7 @@ function withEcPortalContainers(source: string, filePath: string): string {
 function withGeneratedShadcnCompatibility(source: string): string {
 	const withChartAttributeSelectors = removeStandaloneEcPrefixes(source)
 		.replace(/\[stroke=#ccc\]/g, "[stroke='#ccc']")
-		.replace(/\[stroke=#fff\]/g, "[stroke='#fff']")
-		.replace(
-			/"cn-input-otp flex items-center has-disabled:opacity-50"/g,
-			'"cn-input-otp ec:flex ec:items-center ec:has-disabled:opacity-50"',
-		)
-		.replace(/String\.raw`rtl:/g, "String.raw`ec:rtl:");
+		.replace(/\[stroke=#fff\]/g, "[stroke='#fff']");
 
 	if (!withChartAttributeSelectors.includes('from "react-day-picker"')) {
 		return withChartAttributeSelectors;

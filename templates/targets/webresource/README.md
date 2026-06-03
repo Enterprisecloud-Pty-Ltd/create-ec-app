@@ -286,7 +286,7 @@ npm install
 This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
-- reuses the built stylesheet from `dist/main.css`
+- creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - creates `src/runtime/types.ts` only if that file does not already exist
 - provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
 - mounts your React app directly into the PCF container
@@ -306,7 +306,8 @@ What gets generated:
 
 - a minimal PCF wrapper project under `pcf/<ConstructorName>`
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
-- direct imports back to your webresource source and built CSS
+- direct imports back to your webresource source
+- a generated `pcf-scoped.css` file with CSS custom properties scoped to the PCF control
 
 ## Notes
 
