@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import App from "{{PROJECT_APP_IMPORT}}";
 import "{{PROJECT_CSS_IMPORT}}";
-import { EcAppShell } from "{{PROJECT_EC_APP_SHELL_IMPORT}}";
+import { PcfAppShell } from "./runtime/PcfAppShell";
 import type { IInputs, IOutputs } from "./control/generated/ManifestTypes";
 import type {
 	PcfRuntimeContext,
@@ -16,13 +16,37 @@ function sanitizeGuid(value: string | null | undefined): string | null {
 	return value.replace(/[{}]/g, "");
 }
 
+function getPageClientUrl(
+	pageContext:
+		| {
+				clientUrl?: unknown;
+				getClientUrl?: unknown;
+		  }
+		| undefined,
+): string | null {
+	const getClientUrl = pageContext?.getClientUrl;
+	if (typeof getClientUrl === "function") {
+		try {
+			const clientUrl = getClientUrl.call(pageContext);
+			return typeof clientUrl === "string" ? clientUrl : null;
+		} catch {
+			return null;
+		}
+	}
+
+	return typeof pageContext?.clientUrl === "string"
+		? pageContext.clientUrl
+		: null;
+}
+
 function getContextInfo(context: ComponentFramework.Context<IInputs>) {
 	const pageContext = (
 		context as ComponentFramework.Context<IInputs> & {
 			page?: {
+				clientUrl?: unknown;
 				entityId?: string;
 				entityTypeName?: string;
-				getClientUrl?: () => string;
+				getClientUrl?: unknown;
 			};
 		}
 	).page;
@@ -39,7 +63,7 @@ function getContextInfo(context: ComponentFramework.Context<IInputs>) {
 		),
 		entityName:
 			modeContextInfo?.entityTypeName ?? pageContext?.entityTypeName ?? null,
-		clientUrl: pageContext?.getClientUrl?.() ?? null,
+		clientUrl: getPageClientUrl(pageContext),
 		userId: sanitizeGuid(context.userSettings.userId),
 	};
 }
@@ -112,8 +136,8 @@ export class {{PCF_CONSTRUCTOR}}
 		_state: ComponentFramework.Dictionary,
 		container: HTMLDivElement,
 	): void {
-		container.classList.add("ec-pcf-shell-control");
-		container.dataset.ecPcfControl = "{{PCF_CONSTRUCTOR}}";
+		container.classList.add("pcf-shell-control");
+		container.dataset.pcfControl = "{{PCF_CONSTRUCTOR}}";
 		this.runtime = createRuntime(context);
 		this.root = createRoot(container);
 		this.render();
@@ -144,7 +168,7 @@ export class {{PCF_CONSTRUCTOR}}
 				StrictMode,
 				null,
 				React.createElement(
-					EcAppShell,
+					PcfAppShell,
 					null,
 					React.createElement(
 						QueryClientProvider,

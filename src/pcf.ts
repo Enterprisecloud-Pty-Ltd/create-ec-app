@@ -3,9 +3,13 @@ import { fileURLToPath } from "node:url";
 import fs from "fs-extra";
 import {
 	PCF_SCOPED_CSS_FILE,
-	scopeCssVariablesForPcf,
+	scopeCssForPcf,
 } from "./cssScope.js";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
+import {
+	ensurePortalContainerRuntime,
+	localizeShadcnPortals,
+} from "./portalContainers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,31 +30,6 @@ export interface PcfRuntimeContext {
 \twebApi: PcfWebApi;
 }
 `;
-
-function createAppShellTemplate() {
-	return `import * as React from "react";
-
-const EcPortalContainerContext = React.createContext<HTMLElement | null>(null);
-
-export function useEcPortalContainer() {
-\treturn React.useContext(EcPortalContainerContext);
-}
-
-export function EcAppShell({ children }: { children: React.ReactNode }) {
-\tconst [portalContainer, setPortalContainer] =
-\t\tReact.useState<HTMLDivElement | null>(null);
-
-\treturn (
-\t\t<div data-ec-app-root="">
-\t\t\t<EcPortalContainerContext.Provider value={portalContainer}>
-\t\t\t\t{children}
-\t\t\t\t<div data-ec-portal-root="" ref={setPortalContainer} />
-\t\t\t</EcPortalContainerContext.Provider>
-\t\t</div>
-\t);
-}
-`;
-}
 
 export interface PcfCliOptions {
 	pcfDir: string;
@@ -107,9 +86,12 @@ export async function generatePcfFromExistingWebresource(
 	const appImportPath = ensureRelativeImport(
 		toPosixPath(path.relative(outputDir, path.join(projectDir, "src", "App"))),
 	);
-	const appShellImportPath = ensureRelativeImport(
+	const portalContainerImportPath = ensureRelativeImport(
 		toPosixPath(
-			path.relative(outputDir, path.join(projectDir, "src", "runtime", "EcAppShell")),
+			path.relative(
+				path.join(outputDir, "runtime"),
+				path.join(projectDir, "src", "runtime", "PortalContainer"),
+			),
 		),
 	);
 	const runtimeTypesImportPath = ensureRelativeImport(
@@ -130,8 +112,11 @@ export async function generatePcfFromExistingWebresource(
 	);
 
 	await ensureRuntimeTypes(projectDir);
-	await ensureAppShell(projectDir);
-	const pcfCss = scopeCssVariablesForPcf(
+	await ensurePortalContainerRuntime(projectDir);
+	await localizeShadcnPortals(projectDir, {
+		includeGeneratedCompatibility: false,
+	});
+	const pcfCss = scopeCssForPcf(
 		await fs.readFile(sourceCssPath, "utf8"),
 		constructorName,
 	);
@@ -152,7 +137,7 @@ export async function generatePcfFromExistingWebresource(
 		PCF_VERSION: version,
 		PROJECT_APP_IMPORT: appImportPath,
 		PROJECT_CSS_IMPORT: cssImportPath,
-		PROJECT_EC_APP_SHELL_IMPORT: appShellImportPath,
+		PROJECT_PORTAL_CONTAINER_IMPORT: portalContainerImportPath,
 		PROJECT_NODE_MODULES_TYPES_ROOT: `${relToProject}/node_modules/@types`,
 		PROJECT_REACT_ALIAS: `${relToProject}/node_modules/react`,
 		PROJECT_REACT_DOM_ALIAS: `${relToProject}/node_modules/react-dom`,
@@ -182,16 +167,6 @@ async function ensureRuntimeTypes(projectDir: string): Promise<void> {
 
 	await fs.ensureDir(path.dirname(runtimeTypesPath));
 	await fs.writeFile(runtimeTypesPath, RUNTIME_TYPES_TEMPLATE, "utf8");
-}
-
-async function ensureAppShell(projectDir: string): Promise<void> {
-	const appShellPath = path.join(projectDir, "src", "runtime", "EcAppShell.tsx");
-	if (await fs.pathExists(appShellPath)) {
-		return;
-	}
-
-	await fs.ensureDir(path.dirname(appShellPath));
-	await fs.writeFile(appShellPath, createAppShellTemplate(), "utf8");
 }
 
 async function readJson(filePath: string): Promise<Record<string, unknown> | null> {

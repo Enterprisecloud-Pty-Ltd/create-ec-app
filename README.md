@@ -88,18 +88,12 @@ That shared CSS defines shadcn's Tailwind v4 custom variants and utilities, incl
 
 After generation, the CLI applies small compatibility fixes for app embedding:
 
-- Radix/Base UI portals render into the app-local portal root from `EcAppShell`.
+- Radix/Base UI portals are prepared to use a PCF-local portal root when a PCF wrapper is generated.
 - Known generated selector issues are normalized so builds stay clean with current Vite/Tailwind.
 
 ## Style Scoping
 
-Generated apps use normal Tailwind/shadcn CSS by default. `EcAppShell` is still present, but its job is to provide an app-local portal root for Radix/Base UI overlays:
-
-```tsx
-<div data-ec-app-root="">
-```
-
-When a webresource is converted into a PCF wrapper, the generator creates a local `pcf-scoped.css` file in the generated PCF project. That file is copied from the built `dist/main.css` with CSS custom-property rules rewritten under the PCF host selector, so shadcn/Tailwind theme variables stay inside that control without prefixing or scoping every utility selector.
+Generated webresources use normal Tailwind/shadcn CSS by default. When a webresource is converted into a PCF wrapper, the generator creates a local PCF shell and a local `pcf-scoped.css` file in the generated PCF project. That CSS file is copied from the built `dist/main.css` with every non-keyframe selector rewritten under the `.pcf-shell-control[data-pcf-control="..."]` host selector, so Tailwind utilities, base selectors, and shadcn/Tailwind theme variables stay inside that control.
 
 ## Template Updates
 
@@ -123,10 +117,15 @@ Basic flow:
 npm run build
 ```
 
-2. Run the generator and point `--pcf-dir` at the generated PCF project directory:
+2. Run the generator from the webresource root. Point `--pcf-dir` at the webresource root and `--output` at the PCF project folder you want to generate:
 
 ```bash
-npx create-ec-app@latest --pcf-dir ./pcf/{{ControlName}} namespace {{EC}} --constructor {{ControlName}} --display-name "Control Name"
+npx create-ec-app@latest \
+  --pcf-dir . \
+  --output ./pcf/{{ControlName}} \
+  --namespace EC \
+  --constructor {{ControlName}} \
+  --display-name "Control Name"
 ```
 
 3. Install dependencies inside that generated PCF directory:
@@ -134,33 +133,41 @@ npx create-ec-app@latest --pcf-dir ./pcf/{{ControlName}} namespace {{EC}} --cons
 ```bash
 cd ./pcf/{{ControlName}}
 npm install
+npm run build
 ```
 
 This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - creates and imports `pcf-scoped.css` from the built `dist/main.css`
+- scopes every non-keyframe CSS selector under the generated PCF host selector
 - creates `src/runtime/types.ts` only if that file does not already exist
 - provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
 - mounts your React app directly into the PCF container
 
-Typical conversion flow from inside a generated webresource project:
+Regenerate after app code or CSS changes by running the same sequence again from the webresource root:
 
 ```bash
-npm install
 npm run build
-npx create-ec-app@latest --pcf-dir ./pcf/FusionNotebookHost namespace EC --constructor FusionNotebookHost --display-name "Fusion Notebook Host"
+npx create-ec-app@latest \
+  --pcf-dir . \
+  --output ./pcf/FusionNotebookHost \
+  --namespace EC \
+  --constructor FusionNotebookHost \
+  --display-name "Fusion Notebook Host"
 cd pcf/FusionNotebookHost
 npm install
 npm run build
 ```
+
+Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes.
 
 What gets generated:
 
 - a minimal PCF wrapper project under `pcf/<ConstructorName>`
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
 - direct imports back to your webresource source
-- a generated `pcf-scoped.css` file with CSS custom properties scoped to the PCF control
+- a generated `pcf-scoped.css` file with CSS selectors scoped to the PCF control
 
 What does not happen:
 

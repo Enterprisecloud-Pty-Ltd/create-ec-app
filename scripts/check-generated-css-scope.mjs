@@ -23,30 +23,51 @@ const root = postcss.parse(css, { from: cssPath });
 const failures = [];
 
 root.walkRules((rule) => {
-	if (!rule.nodes?.some((node) => node.type === "decl" && node.prop.startsWith("--"))) {
+	if (isKeyframesRule(rule)) {
 		return;
 	}
 
 	for (const selector of splitSelectorList(rule.selector)) {
-		if (!selector.includes(".ec-pcf-shell-control")) {
-			failures.push(`unscoped custom-property rule: ${selector}`);
+		if (!selector.includes(".pcf-shell-control")) {
+			failures.push(`unscoped PCF rule: ${selector}`);
 		}
 	}
 });
 
-if (!css.includes("[data-ec-pcf-control=")) {
+if (!css.includes("[data-pcf-control=")) {
 	failures.push("missing PCF control data attribute scope");
 }
 
+if (css.includes(".ec-pcf-shell-control") || css.includes("[data-ec-pcf-control=")) {
+	failures.push("legacy EC PCF scope is still present");
+}
+
 if (failures.length > 0) {
-	console.error("PCF CSS variable scope check failed:");
+	console.error("PCF CSS scope check failed:");
 	for (const failure of failures) {
 		console.error(`- ${failure}`);
 	}
 	process.exit(1);
 }
 
-console.log("PCF CSS variable scope check passed.");
+console.log("PCF CSS scope check passed.");
+
+function isKeyframesRule(rule) {
+	let parent = rule.parent;
+
+	while (parent) {
+		if (
+			parent.type === "atrule" &&
+			parent.name.toLowerCase().endsWith("keyframes")
+		) {
+			return true;
+		}
+
+		parent = parent.parent;
+	}
+
+	return false;
+}
 
 function splitSelectorList(selectorList) {
 	const selectors = [];

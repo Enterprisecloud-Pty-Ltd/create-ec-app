@@ -15,6 +15,7 @@ import {
 import fs from "fs-extra";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 import { generatePcfFromExistingWebresource } from "./pcf.js";
+import { localizeShadcnPortals } from "./portalContainers.js";
 
 const { execSync } = await import("node:child_process");
 
@@ -188,31 +189,6 @@ async function generateShadcnUi(projectDir: string): Promise<boolean> {
 	return true;
 }
 
-async function localizeShadcnPortals(projectDir: string): Promise<void> {
-	const componentsDir = path.join(projectDir, "src", "components", "ui");
-	if (!(await fs.pathExists(componentsDir))) {
-		return;
-	}
-
-	const entries = await fs.readdir(componentsDir, { withFileTypes: true });
-
-	for (const entry of entries) {
-		if (!entry.isFile() || !entry.name.endsWith(".tsx")) {
-			continue;
-		}
-
-		const filePath = path.join(componentsDir, entry.name);
-		const source = await fs.readFile(filePath, "utf8");
-		const updated = withGeneratedShadcnCompatibility(
-			withEcPortalContainers(source, filePath),
-		);
-
-		if (updated !== source) {
-			await fs.writeFile(filePath, updated, "utf8");
-		}
-	}
-}
-
 async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
 	const pathsToRemove = [
 		"token.json",
@@ -238,121 +214,6 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	if (entries.length === 0) {
 		await fs.remove(dirPath);
 	}
-}
-
-function withEcPortalContainers(source: string, filePath: string): string {
-	const withPortalContainers = source.replace(
-		/<([A-Za-z][A-Za-z0-9]*Primitive)\.Portal\b(?![^>]*\bcontainer=)/g,
-		"<$1.Portal container={portalContainer ?? undefined}",
-	);
-
-	if (withPortalContainers === source) {
-		return source;
-	}
-
-	return addEcPortalImport(
-		addEcPortalHookDeclarations(withPortalContainers, filePath),
-	);
-}
-
-function withGeneratedShadcnCompatibility(source: string): string {
-	const withChartAttributeSelectors = removeStandaloneEcPrefixes(source)
-		.replace(/\[stroke=#ccc\]/g, "[stroke='#ccc']")
-		.replace(/\[stroke=#fff\]/g, "[stroke='#fff']");
-
-	if (!withChartAttributeSelectors.includes('from "react-day-picker"')) {
-		return withChartAttributeSelectors;
-	}
-
-	return withChartAttributeSelectors.replace(/(\n\s*)table:/g, "$1month_grid:");
-}
-
-function removeStandaloneEcPrefixes(source: string): string {
-	let updated = source;
-	let previous: string;
-
-	do {
-		previous = updated;
-		updated = updated.replace(/(^|[\s"'])ec:(?=\s|["'])/g, "$1");
-	} while (updated !== previous);
-
-	return updated;
-}
-
-function addEcPortalImport(source: string): string {
-	if (source.includes('from "@/runtime/EcAppShell"')) {
-		return source;
-	}
-
-	const importPattern =
-		/import[\s\S]*?from\s+["'][^"']+["'];?\n|import\s+["'][^"']+["'];?\n/g;
-	let insertAt = 0;
-	for (const match of source.matchAll(importPattern)) {
-		insertAt = (match.index ?? 0) + match[0].length;
-	}
-
-	const importLine =
-		'import { useEcPortalContainer } from "@/runtime/EcAppShell"\n';
-
-	return `${source.slice(0, insertAt)}${importLine}${source.slice(insertAt)}`;
-}
-
-function addEcPortalHookDeclarations(source: string, filePath: string): string {
-	const lines = source.split("\n");
-	const hookBodyLines = new Set<number>();
-
-	for (let index = 0; index < lines.length; index += 1) {
-		if (!lines[index]?.includes("container={portalContainer ?? undefined}")) {
-			continue;
-		}
-
-		const bodyLine = findContainingFunctionBodyLine(lines, index);
-		if (bodyLine === undefined) {
-			throw new Error(
-				`Could not locate a function body for a shadcn Portal in ${filePath}.`,
-			);
-		}
-
-		hookBodyLines.add(bodyLine);
-	}
-
-	for (const bodyLine of [...hookBodyLines].sort((a, b) => b - a)) {
-		if (lines[bodyLine + 1]?.includes("const portalContainer")) {
-			continue;
-		}
-
-		const indent = lines[bodyLine]?.match(/^(\s*)/)?.[1] ?? "";
-		lines.splice(
-			bodyLine + 1,
-			0,
-			`${indent}  const portalContainer = useEcPortalContainer()`,
-		);
-	}
-
-	return lines.join("\n");
-}
-
-function findContainingFunctionBodyLine(
-	lines: string[],
-	portalLine: number,
-): number | undefined {
-	for (let index = portalLine; index >= 0; index -= 1) {
-		if (!/^\s*function\s+\w+/.test(lines[index] ?? "")) {
-			continue;
-		}
-
-		for (
-			let bodyLine = index;
-			bodyLine <= portalLine;
-			bodyLine += 1
-		) {
-			if (/\)\s*\{\s*$/.test(lines[bodyLine] ?? "")) {
-				return bodyLine;
-			}
-		}
-	}
-
-	return undefined;
 }
 
 main().catch((err) => {
@@ -608,7 +469,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@progress/kendo-theme-fluent/dist/all.css";
 import "./index.css";
 import App from "./App.tsx";
-import { EcAppShell } from "./runtime/EcAppShell.tsx";
 
 import { AuthProvider } from "./context/AuthContext.tsx";
 
@@ -631,9 +491,7 @@ root.render(
     <StrictMode>
         <AuthProvider>
             <QueryClientProvider client={queryClient}>
-                <EcAppShell>
-                    <App />
-                </EcAppShell>
+                <App />
             </QueryClientProvider>
         </AuthProvider>
     </StrictMode>
