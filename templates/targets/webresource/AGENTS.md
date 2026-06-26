@@ -1,107 +1,189 @@
 ## Purpose
 
-This is a Dynamics 365 / Dataverse web resource template using React + TypeScript + Vite.
-Treat it as a **Dynamics-hosted frontend** — not a generic SPA. Do not modernise it into something else unless explicitly asked.
+This repository is a Dynamics 365 / Dataverse web resource using React, TypeScript, and Vite.
 
-The default philosophy is: keep the app small, readable, and easy to ship into Dynamics. Prefer obvious code, existing components, and the template's established runtime patterns over broad abstractions or clever defensive layers.
+Treat it as a Dynamics-hosted frontend, not a generic SPA. Keep it small, readable, and easy to ship into Dynamics.
 
----
+Use the global AGENTS.md rules first. This file adds project-specific constraints.
 
 ## Hard Constraints
 
-1. **Dynamics runtime must keep working** — preserve `window.parent.Xrm`/`window.top.Xrm` detection and `ClientGlobalContext.js.aspx` where present.
-2. **Local dev must keep working** — `token.json` drives local auth; never bundle it into output or commit real values.
-3. **Build output must stay web-resource-friendly** — predictable filenames, no uncontrolled chunking, deployable via Webresource Manager or pipeline upload.
-4. **Keep it client-side** — no SSR, no Next.js, no backend coupling unless explicitly requested.
-5. **Make surgical changes** — extend existing patterns before inventing new ones; don't refactor unrelated areas.
+- Keep Dynamics runtime support working.
+- Keep local development support working.
+- Keep build output web-resource-friendly.
+- Keep the app client-side.
+- Make surgical changes.
 
----
+Do not modernize the project into a different architecture unless explicitly asked.
 
 ## Runtime Modes
 
-**Dynamics-hosted:** detect via `window.parent.Xrm`, derive base URL from `getGlobalContext().getClientUrl()`, no bearer token needed.
+The app supports two modes.
 
-**Local dev:** load `token.json` dynamically, use bearer token, call Dataverse directly.
+### Dynamics-hosted
 
-Never mix the two modes or duplicate their logic — reuse `authService.ts`.
+- Detect Dynamics through the existing `window.parent.Xrm` / `window.top.Xrm` pattern.
+- Derive the base URL from `Xrm.Utility.getGlobalContext().getClientUrl()`.
+- Do not add bearer-token auth in hosted mode.
+- Preserve `ClientGlobalContext.js.aspx` where the project uses it.
 
----
+### Local dev
 
-## Critical Files — Don't Break These
+- Use `token.json` for local auth only.
+- Load `token.json` dynamically.
+- Never commit real token values.
+- Never bundle `token.json` into deployment output.
 
-| File | Why it matters |
+Do not mix the two modes. Do not duplicate runtime detection. Reuse `authService.ts`.
+
+## Critical Files
+
+| File | Rule |
 |---|---|
-| `src/services/authService.ts` | Single source of truth for env detection, base URL, and auth headers |
-| `src/main.tsx` | App bootstrap — preserve providers and theme imports |
-| `vite.config.ts` | Controls deployment shape: `base: "./"`, predictable output names, `main.css` |
-| `index.html` | Dynamics integration boundary — may inject `ClientGlobalContext.js.aspx` |
-| `token.json` | Local dev only — never commit real values, never bundle |
+| `src/services/authService.ts` | Single source of truth for runtime detection, base URL, and auth headers. |
+| `src/main.tsx` | Preserve bootstrap, providers, and global theme/style imports. |
+| `vite.config.ts` | Preserve Dynamics-friendly output: `base: "./"`, predictable filenames, and `main.css`. |
+| `index.html` | Treat as the Dynamics integration boundary. Preserve `ClientGlobalContext.js.aspx` where present. |
+| `token.json` | Local dev only. Never commit real values or bundle it. |
 
----
+## API and Data Access
 
-## API / Data Access
+Prefer direct, boring Dataverse Web API calls.
 
-- Put reusable API logic in `src/services`
-- Always reuse `getApiUrl()` and `getAuthHeaders()` — never duplicate them
-- Use narrow `$select` queries; throw on non-OK responses
-- No raw fetch calls scattered across UI components
-- Use Zod for validation where data crosses a boundary: form inputs, URL/search params, config, and Dataverse/API responses that the UI depends on
-- Keep service functions boring and explicit: one fetch function, one hook, one mutation where needed
-- Do not add repository/client layers unless the app has enough repeated API logic to justify them
+Use:
 
-**Preferred pattern:**
-```ts
-// {entity}Service.ts — fetch function + TanStack Query hook
-// invalidate relevant queryKey on mutation success
+- `getApiUrl()`
+- `getAuthHeaders()`
+- narrow `$select` queries
+- `URLSearchParams` for normal query parameters
+- direct `fetch` inside service files
+- small TypeScript interfaces for response shapes
+- clear `response.ok` checks with useful status text
+
+Avoid:
+
+- raw fetch calls inside UI components
+- duplicated auth or base URL logic
+- repository/client layers for small features
+- metadata resolvers unless arbitrary table names are a real requirement
+- entity caches unless repeated metadata/API cost is demonstrated
+- generic OData builders
+- Zod schemas for every Dataverse response
+- GUID or logical-name regex validation by default
+- silent fallbacks for failed Dataverse calls
+
+For known tables, use known entity set names. Fetch metadata only when the feature truly supports arbitrary entity logical names.
+
+Escape OData string literals when interpolating inside quoted OData expressions. Do not create a broad escaping/parsing layer for simple queries.
+
+## Validation
+
+Use TypeScript types for normal Dataverse response shapes.
+
+Use runtime validation only when the current feature needs it, such as:
+
+- user-entered form data
+- URL/search parameters that control behavior
+- local config that can be wrong
+- genuinely variable API data where the UI must branch safely
+- security-sensitive or data-loss-prone paths
+
+Do not validate values just because they are shaped like GUIDs, logical names, dates, URLs, or enum strings. If Dataverse will reject the value clearly and there is no local UX/security need, pass it through.
+
+Do not normalize strings by default. Trim, lowercase, strip braces, or reformat only when the app has a known input source that sends multiple formats.
+
+## Services, Queries, and Mutations
+
+Keep service files explicit.
+
+Preferred shape:
+
+- one fetch/save function for the operation
+- one TanStack Query hook when components need it
+- one mutation hook when mutation state or invalidation is needed
+- query keys colocated with the hook when reused for invalidation
+
+Do not create wrapper chains such as:
+
+```text
+resolveConfig -> normalizeInput -> validateInput -> resolveMetadata -> buildRequest -> executeRequest
 ```
 
-See the example at the bottom of this file.
+Prefer direct flow:
 
----
+```text
+read config -> fetch -> check response -> return typed data
+```
 
 ## State Management
 
-- **TanStack Query** → server state
-- **Zustand** → shared client state
-- **Local component state** → local UI behaviour
-- No Redux unless explicitly requested; don't store server state in Zustand
+- Use TanStack Query for server state.
+- Use local component state for local UI behavior.
+- Use Zustand only for shared client state that has outgrown local state.
+- Do not store server state in Zustand.
+- Do not add Redux unless explicitly requested.
 
----
+## UI and Styling
 
-## UI & Styling
+Stay consistent with the project's existing UI system.
 
-- Kendo UI or Shadcn/ui — stay consistent with whichever the project uses; don't mix UI systems unless explicitly asked.
-- If the project uses Shadcn/ui, use Shadcn components from `@/components/ui` and style them with Tailwind utility classes.
-- If the project uses Kendo UI, use Kendo React components for controls, grids, menus, dialogs, inputs, and other rich UI. Use Tailwind for layout, spacing, and local composition around those components.
-- Tailwind is the default styling approach for both Shadcn/ui and Kendo projects; preserve `main.css` output.
-- Do not hand-roll component styling or custom CSS unless Tailwind/component props cannot reasonably express the requirement.
-- Prefer existing component APIs, theme tokens, variants, and utility helpers before creating new wrappers.
-- Keep screen layouts practical for embedded Dynamics use: compact, scannable, responsive, and not marketing-page styled.
-
----
+- Shadcn/ui projects: use existing `@/components/ui` components and Tailwind utilities.
+- Kendo projects: use Kendo React components for rich controls and Tailwind for layout/composition.
+- Preserve the existing theme and `main.css` output.
+- Do not mix UI systems unless explicitly asked.
+- Do not hand-roll custom CSS unless component props and Tailwind are not enough.
+- Keep layouts compact, scannable, responsive, and suitable for embedded Dynamics screens.
 
 ## Code Shape
 
-- Keep code simple and readable. A future maintainer should understand the main path quickly.
-- Avoid over-engineering: no generic frameworks, broad factories, speculative abstractions, or excessive configuration for small features.
-- Avoid being overly defensive. Validate real external inputs and API responses where useful, but don't wrap every local value in ceremony.
-- Prefer direct, typed functions over classes unless the existing code already uses classes for that concern.
-- Keep React components focused: UI in components, reusable data access in services, shared client state in Zustand only when local state is no longer enough.
-- Make the smallest change that solves the request cleanly.
+Prefer:
 
----
+- focused React components
+- direct typed functions
+- existing services and components
+- small local helpers only when they remove real duplication or name non-obvious domain logic
+- explicit Dataverse table/field handling over generic frameworks
 
-## What To Avoid
+Avoid:
 
-Unless explicitly asked: don't replace Vite, don't add SSR, don't remove Dynamics runtime logic, don't remove the local token flow, don't hardcode org-specific values, don't rename output files in ways that complicate deployment.
+- broad factories
+- generic service clients
+- classes for simple service logic
+- excessive configuration
+- defensive wrappers around every value
+- broad refactors while adding a feature
 
----
+## Error Handling
+
+Dataverse reads, saves, deletes, uploads, downloads, auth failures, and required parsing failures should throw.
+
+Do not swallow failed fetches and treat them as “not found” unless the requirement explicitly says the feature is best-effort.
+
+Include response status and useful response text where practical.
+
+## Build and Deployment
+
+Do not replace Vite, add SSR, add Next.js, change output names, enable uncontrolled chunking, or introduce backend coupling unless explicitly asked.
+
+Keep output deployable through Webresource Manager or the existing pipeline.
+
+## Checks
+
+Run the smallest relevant command for the changed area, such as:
+
+- typecheck
+- lint
+- targeted tests
+- Vite build when deployment shape could be affected
+
+Do not run broad expensive checks unless the change touches shared infrastructure or the project requires it.
 
 ## Example Service Pattern
 
 ```ts
-import { getApiUrl, getAuthHeaders } from "@/services/authService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { getApiUrl, getAuthHeaders } from "@/services/authService";
 
 export interface Account {
   accountid: string;
@@ -109,23 +191,52 @@ export interface Account {
 }
 
 export const listAccounts = async (): Promise<Account[]> => {
-  const res = await fetch(
+  const response = await fetch(
     `${getApiUrl()}/accounts?$select=accountid,name&$top=50`,
     { headers: await getAuthHeaders() },
   );
-  if (!res.ok) throw new Error(`Failed to fetch accounts: ${res.status}`);
-  return (await res.json()).value as Account[];
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch accounts: ${response.status}`);
+  }
+
+  const data = (await response.json()) as { value: Account[] };
+  return data.value;
 };
 
+const accountsQueryKey = ["accounts"] as const;
+
 export const useAccounts = () =>
-  useQuery({ queryKey: ["accounts"], queryFn: listAccounts });
+  useQuery({ queryKey: accountsQueryKey, queryFn: listAccounts });
+
+export const patchAccount = async (
+  id: string,
+  data: Partial<Account>,
+): Promise<void> => {
+  const response = await fetch(`${getApiUrl()}/accounts(${id})`, {
+    method: "PATCH",
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update account: ${response.status}`);
+  }
+};
 
 export const useUpdateAccount = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Account> }) =>
       patchAccount(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["accounts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
   });
 };
 ```
+## Figma MCP
+When using the Figma MCP server, ensure that you are not just blindly copying the designs. Take note and always place a focus on the following:
+
+- Ensure responsiveness on all screen sizes
+- If there are icons as part of the design, use those, don't blindly look for Lucide-React equivalents.
+- Use the exact colours in the design. Don't make up your own.
