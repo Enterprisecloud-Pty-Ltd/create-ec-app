@@ -2,7 +2,12 @@ import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it } from "vitest";
-import { mergeJson, replaceTokensRecursively } from "../src/libFunctions";
+import {
+	applyLayer,
+	mergeJson,
+	readJsonIfExists,
+	replaceTokensRecursively,
+} from "../src/libFunctions";
 
 const tempDirs: string[] = [];
 
@@ -55,6 +60,76 @@ describe("mergeJson", () => {
 			name: "base",
 			nested: { keep: false },
 		});
+	});
+});
+
+describe("readJsonIfExists", () => {
+	it("returns undefined for missing files and parsed objects for existing files", async () => {
+		const rootDir = await makeTempDir();
+		const filePath = path.join(rootDir, "package.json");
+
+		await expect(readJsonIfExists(filePath)).resolves.toBeUndefined();
+
+		await fs.writeJson(filePath, { name: "demo" });
+
+		await expect(readJsonIfExists(filePath)).resolves.toEqual({ name: "demo" });
+	});
+
+	it("throws when the existing JSON value is not an object", async () => {
+		const rootDir = await makeTempDir();
+		const filePath = path.join(rootDir, "list.json");
+		await fs.writeJson(filePath, ["not", "an", "object"]);
+
+		await expect(readJsonIfExists(filePath)).rejects.toThrow(
+			`Expected JSON object in ${filePath}.`,
+		);
+	});
+});
+
+describe("applyLayer", () => {
+	it("copies files, applies patch file names, and merges package patches", async () => {
+		const rootDir = await makeTempDir();
+		const projectDir = path.join(rootDir, "project");
+		const layerDir = path.join(rootDir, "layer");
+
+		await fs.outputJson(path.join(projectDir, "package.json"), {
+			dependencies: { react: "19.0.0" },
+			scripts: { build: "vite build" },
+			nested: { replaced: false, removed: true },
+		});
+		await fs.outputJson(path.join(layerDir, "package.patch.json"), {
+			dependencies: { react: "19.2.7" },
+			scripts: { test: "vitest run" },
+			nested: { replaced: true },
+		});
+		await fs.outputFile(path.join(layerDir, "src", "App.patch.tsx"), "patched");
+		await fs.outputFile(path.join(layerDir, "README.md"), "copied");
+
+		await applyLayer(layerDir, projectDir);
+
+		await expect(fs.readJson(path.join(projectDir, "package.json"))).resolves.toEqual({
+			dependencies: { react: "19.2.7" },
+			scripts: { build: "vite build", test: "vitest run" },
+			nested: { replaced: true },
+		});
+		await expect(
+			fs.readFile(path.join(projectDir, "src", "App.tsx"), "utf8"),
+		).resolves.toBe("patched");
+		await expect(
+			fs.readFile(path.join(projectDir, "README.md"), "utf8"),
+		).resolves.toBe("copied");
+	});
+
+	it("throws when a JSON patch is not an object", async () => {
+		const rootDir = await makeTempDir();
+		const projectDir = path.join(rootDir, "project");
+		const layerDir = path.join(rootDir, "layer");
+		const patchPath = path.join(layerDir, "package.patch.json");
+		await fs.outputJson(patchPath, ["bad"]);
+
+		await expect(applyLayer(layerDir, projectDir)).rejects.toThrow(
+			`Expected JSON object in ${patchPath}.`,
+		);
 	});
 });
 

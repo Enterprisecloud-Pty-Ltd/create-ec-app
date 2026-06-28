@@ -18,13 +18,18 @@ import { generatePcfFromExistingWebresource } from "./pcf.js";
 
 const { execSync } = await import("node:child_process");
 
-type AppTarget = "webresource" | "portal" | "power-pages" | "swa" | "code-apps";
-type UiTarget = "kendo" | "shadcn-ui";
+export type AppTarget =
+	| "webresource"
+	| "portal"
+	| "power-pages"
+	| "swa"
+	| "code-apps";
+export type UiTarget = "kendo" | "shadcn-ui";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-interface CliArgs {
+export interface CliArgs {
 	pcfDir?: string;
 	controlConstructor?: string;
 	description?: string;
@@ -44,7 +49,7 @@ interface CliArgs {
 	skipGit?: boolean;
 }
 
-async function main() {
+export async function main() {
 	const argv = process.argv.slice(2);
 
 	if (argv.includes("--help") || argv.includes("-h")) {
@@ -80,7 +85,9 @@ async function main() {
 	);
 }
 
-async function resolveScaffoldOptions(cliArgs: CliArgs): Promise<ScaffoldOptions> {
+export async function resolveScaffoldOptions(
+	cliArgs: CliArgs,
+): Promise<ScaffoldOptions> {
 	const projectName = (cliArgs.projectName ?? (await promptProjectName())).trim();
 	const projectNameError = validateProjectName(projectName);
 	if (projectNameError) {
@@ -106,7 +113,7 @@ async function resolveScaffoldOptions(cliArgs: CliArgs): Promise<ScaffoldOptions
 	};
 }
 
-interface ScaffoldOptions {
+export interface ScaffoldOptions {
 	install: boolean;
 	force: boolean;
 	projectName: string;
@@ -115,7 +122,7 @@ interface ScaffoldOptions {
 	uiType: UiTarget;
 }
 
-async function scaffoldProject({
+export async function scaffoldProject({
 	install,
 	force,
 	projectName,
@@ -183,7 +190,7 @@ async function scaffoldProject({
 	}
 }
 
-async function assertCanCreateProjectDir(
+export async function assertCanCreateProjectDir(
 	projectDir: string,
 	force: boolean,
 ): Promise<void> {
@@ -207,7 +214,7 @@ async function assertCanCreateProjectDir(
 	await fs.remove(projectDir);
 }
 
-function initializeGit(projectDir: string): void {
+export function initializeGit(projectDir: string): void {
 	try {
 		execSync("git init", { cwd: projectDir, stdio: "ignore" });
 		execSync("git add .", { cwd: projectDir, stdio: "ignore" });
@@ -223,7 +230,7 @@ function initializeGit(projectDir: string): void {
 	}
 }
 
-async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
+export async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
 	const pathsToRemove = [
 		"token.json",
 		"src/services/AuthService.ts",
@@ -250,10 +257,12 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	}
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+if (isMainModule()) {
+	main().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}
 
 async function promptProjectName(): Promise<string> {
 	const name = await text({
@@ -324,7 +333,7 @@ async function promptInstallDependencies(): Promise<boolean> {
 	return shouldRunNpmInstall.run;
 }
 
-function printHelp(): void {
+export function printHelp(): void {
 	console.log(`create-ec-app
 
 Usage:
@@ -365,7 +374,7 @@ General:
 `);
 }
 
-function validateProjectName(value: string | undefined): string | undefined {
+export function validateProjectName(value: string | undefined): string | undefined {
 	if (value === undefined) return "Project name cannot be empty";
 	if (value.length === 0) return "Project name cannot be empty";
 	if (value.toLocaleLowerCase() !== value)
@@ -376,7 +385,7 @@ function validateProjectName(value: string | undefined): string | undefined {
 	return undefined;
 }
 
-function parseCliArgs(argv: string[]): CliArgs {
+export function parseCliArgs(argv: string[]): CliArgs {
 	const read = (name: string) => {
 		const equalsPrefix = `${name}=`;
 		const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
@@ -446,7 +455,7 @@ function defined<K extends keyof CliArgs>(
 	return value === undefined ? {} : ({ [key]: value } as Pick<CliArgs, K>);
 }
 
-function readTarget(argv: string[]): AppTarget | undefined {
+export function readTarget(argv: string[]): AppTarget | undefined {
 	const targetFlags: Array<[string, AppTarget]> = [
 		["--webresource", "webresource"],
 		["--portal", "portal"],
@@ -481,7 +490,7 @@ function readTarget(argv: string[]): AppTarget | undefined {
 	);
 }
 
-function readUiType(argv: string[]): UiTarget | undefined {
+export function readUiType(argv: string[]): UiTarget | undefined {
 	const uiFlags: Array<[string, UiTarget]> = [
 		["--kendo", "kendo"],
 		["--shadcn", "shadcn-ui"],
@@ -515,7 +524,10 @@ function readUiType(argv: string[]): UiTarget | undefined {
 	throw new Error(`Unsupported UI "${uiValue}". Use kendo, shadcn, or shadcn-ui.`);
 }
 
-function readStringOption(argv: string[], name: string): string | undefined {
+export function readStringOption(
+	argv: string[],
+	name: string,
+): string | undefined {
 	const equalsPrefix = `${name}=`;
 	const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
 	if (equalsValue) {
@@ -527,17 +539,25 @@ function readStringOption(argv: string[], name: string): string | undefined {
 	return value && !value.startsWith("--") ? value : undefined;
 }
 
-function isAppTarget(value: string): value is AppTarget {
+export function isAppTarget(value: string): value is AppTarget {
 	return ["webresource", "portal", "power-pages", "swa", "code-apps"].includes(value);
 }
 
-function isUiTarget(value: string): value is UiTarget {
+export function isUiTarget(value: string): value is UiTarget {
 	return ["kendo", "shadcn-ui"].includes(value);
 }
 
-function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+export function stripUndefined<T extends Record<string, unknown>>(
+	value: T,
+): Partial<T> {
 	const entries = Object.entries(value).filter(([, entryValue]) => entryValue !== undefined);
 	return Object.fromEntries(entries) as Partial<T>;
+}
+
+function isMainModule(): boolean {
+	return process.argv[1]
+		? path.resolve(process.argv[1]) === __filename
+		: false;
 }
 
 // NOTE: Constants

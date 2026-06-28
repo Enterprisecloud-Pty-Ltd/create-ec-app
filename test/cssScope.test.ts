@@ -64,6 +64,18 @@ describe("scopeCssForPcf", () => {
 		expect(output).not.toContain(`${scope} from`);
 		expect(output).toContain(`${scope} .animate-in`);
 	});
+
+	it("keeps already-scoped selectors and maps app root aliases to the host", () => {
+		const output = scopeCssForPcf(
+			`.pcf-shell-control[data-pcf-control="Existing"] .button { color: red; }
+:host, [data-ec-app-root], .ec-app[data-mode="x"] { color: blue; }`,
+			"Existing",
+		);
+		const scope = '.pcf-shell-control[data-pcf-control="Existing"]';
+
+		expect(output).toContain(`${scope} .button`);
+		expect(output).toContain(`${scope} { color: blue; }`);
+	});
 });
 
 describe("check-generated-css-scope", () => {

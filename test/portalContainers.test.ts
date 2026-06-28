@@ -2,7 +2,10 @@ import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it } from "vitest";
-import { localizeShadcnPortals } from "../src/portalContainers";
+import {
+	ensurePortalContainerRuntime,
+	localizeShadcnPortals,
+} from "../src/portalContainers";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const fixtureDir = path.join(repoRoot, "test", "fixtures", "shadcn");
@@ -71,5 +74,150 @@ describe("localizeShadcnPortals", () => {
 		await localizeShadcnPortals(projectDir);
 
 		await expect(fs.readFile(filePath, "utf8")).resolves.toBe(original);
+	});
+
+	it("returns without creating runtime files when no UI component folder exists", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-empty-"),
+		);
+		tempDirs.push(projectDir);
+
+		await localizeShadcnPortals(projectDir);
+
+		await expect(
+			fs.pathExists(path.join(projectDir, "src", "runtime", "PortalContainer.ts")),
+		).resolves.toBe(false);
+	});
+
+	it("does not overwrite an existing portal runtime file", async () => {
+		const projectDir = await makeProjectWithFixtures();
+		const runtimePath = path.join(
+			projectDir,
+			"src",
+			"runtime",
+			"PortalContainer.ts",
+		);
+		await fs.outputFile(runtimePath, "export const existing = true;\n");
+
+		await ensurePortalContainerRuntime(projectDir);
+
+		await expect(fs.readFile(runtimePath, "utf8")).resolves.toBe(
+			"export const existing = true;\n",
+		);
+	});
+
+	it("migrates legacy EC portal runtime imports", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-legacy-"),
+		);
+		tempDirs.push(projectDir);
+		const filePath = path.join(
+			projectDir,
+			"src",
+			"components",
+			"ui",
+			"dialog.tsx",
+		);
+		await fs.outputFile(
+			filePath,
+			`import { useEcPortalContainer } from "@/runtime/EcPortalContainer"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+
+function DialogContent() {
+  const legacy = useEcPortalContainer()
+  return <DialogPrimitive.Portal>{legacy ? null : null}</DialogPrimitive.Portal>
+}
+`,
+		);
+
+		await localizeShadcnPortals(projectDir);
+
+		const source = await fs.readFile(filePath, "utf8");
+		expect(source).toContain('from "@/runtime/PortalContainer"');
+		expect(source).toContain("usePortalContainer()");
+		expect(source).not.toContain("useEcPortalContainer");
+		expect(source).not.toContain("EcPortalContainer");
+	});
+
+	it("applies generated shadcn compatibility changes unless disabled", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-compat-"),
+		);
+		tempDirs.push(projectDir);
+		const filePath = path.join(
+			projectDir,
+			"src",
+			"components",
+			"ui",
+			"calendar.tsx",
+		);
+		await fs.outputFile(
+			filePath,
+			`import { DayPicker } from "react-day-picker"
+
+function Calendar() {
+  return (
+    <DayPicker
+      className="ec:"
+      classNames={{
+        table: "w-full",
+      }}
+    />
+  )
+}
+`,
+		);
+
+		await localizeShadcnPortals(projectDir);
+
+		const updated = await fs.readFile(filePath, "utf8");
+		expect(updated).toContain('className=""');
+		expect(updated).toContain("month_grid:");
+
+		await fs.writeFile(
+			filePath,
+			`import { DayPicker } from "react-day-picker"
+
+function Calendar() {
+  return (
+    <DayPicker
+      classNames={{
+        table: "w-full",
+      }}
+    />
+  )
+}
+`,
+		);
+		await localizeShadcnPortals(projectDir, {
+			includeGeneratedCompatibility: false,
+		});
+
+		await expect(fs.readFile(filePath, "utf8")).resolves.toContain("table:");
+	});
+
+	it("throws an actionable error when a portal is outside a function body", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-error-"),
+		);
+		tempDirs.push(projectDir);
+		const filePath = path.join(
+			projectDir,
+			"src",
+			"components",
+			"ui",
+			"bad.tsx",
+		);
+		await fs.outputFile(
+			filePath,
+			`import * as DialogPrimitive from "@radix-ui/react-dialog"
+
+const badPortal = <DialogPrimitive.Portal />
+`,
+		);
+
+		await expect(localizeShadcnPortals(projectDir)).rejects.toThrow(
+			`Could not locate a function body for a shadcn Portal in ${filePath}:3.`,
+		);
 	});
 });
