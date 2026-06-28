@@ -39,7 +39,22 @@ async function makeProjectWithFixtures(): Promise<string> {
 describe("localizeShadcnPortals", () => {
 	it("adds portal container props, imports, hooks, and runtime file", async () => {
 		const projectDir = await makeProjectWithFixtures();
+		await fs.outputFile(
+			path.join(projectDir, "src", "components", "ui", "notes.md"),
+			"# ignored",
+		);
 
+		await localizeShadcnPortals(projectDir);
+		const firstRunSources = new Map<string, string>();
+		for (const fileName of ["dialog.tsx", "dropdown-menu.tsx", "popover.tsx"]) {
+			firstRunSources.set(
+				fileName,
+				await fs.readFile(
+					path.join(projectDir, "src", "components", "ui", fileName),
+					"utf8",
+				),
+			);
+		}
 		await localizeShadcnPortals(projectDir);
 
 		for (const fileName of ["dialog.tsx", "dropdown-menu.tsx", "popover.tsx"]) {
@@ -53,6 +68,7 @@ describe("localizeShadcnPortals", () => {
 			);
 			expect(source).toContain("const portalContainer = usePortalContainer()");
 			expect(source).toContain("container={portalContainer ?? undefined}");
+			expect(source).toBe(firstRunSources.get(fileName));
 		}
 
 		await expect(

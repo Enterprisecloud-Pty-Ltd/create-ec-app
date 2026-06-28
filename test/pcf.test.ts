@@ -146,6 +146,38 @@ describe("generatePcfFromExistingWebresource", () => {
 		).resolves.toBe(true);
 	});
 
+	it("falls back to the folder name when package.json cannot be read", async () => {
+		const projectDir = await makeBuiltWebresource();
+		await fs.writeFile(path.join(projectDir, "package.json"), "{bad json", "utf8");
+
+		const result = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+		});
+
+		expect(result.constructorName).toMatch(/^CreateEcAppPcf[A-Za-z0-9]+Host$/);
+	});
+
+	it("supports custom templates without a ControlHost project file", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const templateDir = path.join(projectDir, "minimal-pcf-template");
+		await fs.outputFile(
+			path.join(templateDir, "README.patch.md"),
+			"{{PCF_CONSTRUCTOR}} {{PCF_PACKAGE_NAME}}",
+		);
+
+		await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			template: templateDir,
+			output: "minimal-pcf",
+			controlConstructor: "MinimalHost",
+			packageName: "minimal-host-package",
+		});
+
+		await expect(
+			fs.readFile(path.join(projectDir, "minimal-pcf", "README.md"), "utf8"),
+		).resolves.toBe("MinimalHost minimal-host-package");
+	});
+
 	it("fails clearly when required webresource files are missing", async () => {
 		const projectDir = await makeTempDir();
 		await fs.outputJson(path.join(projectDir, "package.json"), {

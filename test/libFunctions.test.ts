@@ -174,4 +174,14 @@ describe("replaceTokensRecursively", () => {
 
 		await expect(fs.readFile(filePath)).resolves.toEqual(original);
 	});
+
+	it("skips files that cannot be read", async () => {
+		const rootDir = await makeTempDir();
+		const linkPath = path.join(rootDir, "missing-link.txt");
+		await fs.symlink(path.join(rootDir, "does-not-exist.txt"), linkPath);
+
+		await expect(
+			replaceTokensRecursively(rootDir, { APP_NAME: "demo" }),
+		).resolves.toBeUndefined();
+	});
 });

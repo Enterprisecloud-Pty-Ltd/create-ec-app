@@ -7,6 +7,7 @@ import {
 	initializeGit,
 	isAppTarget,
 	isUiTarget,
+	main,
 	parseCliArgs,
 	printHelp,
 	readStringOption,
@@ -20,9 +21,18 @@ import {
 
 const tempDirs: string[] = [];
 const originalCwd = process.cwd();
+const originalArgv = process.argv;
+const originalGitEnv = {
+	authorEmail: process.env.GIT_AUTHOR_EMAIL,
+	authorName: process.env.GIT_AUTHOR_NAME,
+	committerEmail: process.env.GIT_COMMITTER_EMAIL,
+	committerName: process.env.GIT_COMMITTER_NAME,
+};
 
 afterEach(async () => {
 	process.chdir(originalCwd);
+	process.argv = originalArgv;
+	restoreGitEnv();
 	await Promise.all(tempDirs.splice(0).map((dir) => fs.remove(dir)));
 	vi.restoreAllMocks();
 });
@@ -31,6 +41,29 @@ async function makeTempDir(): Promise<string> {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "create-ec-app-cli-"));
 	tempDirs.push(dir);
 	return dir;
+}
+
+function setGitIdentityEnv(): void {
+	process.env.GIT_AUTHOR_EMAIL = "test@example.com";
+	process.env.GIT_AUTHOR_NAME = "create-ec-app tests";
+	process.env.GIT_COMMITTER_EMAIL = "test@example.com";
+	process.env.GIT_COMMITTER_NAME = "create-ec-app tests";
+}
+
+function restoreGitEnv(): void {
+	setOptionalEnv("GIT_AUTHOR_EMAIL", originalGitEnv.authorEmail);
+	setOptionalEnv("GIT_AUTHOR_NAME", originalGitEnv.authorName);
+	setOptionalEnv("GIT_COMMITTER_EMAIL", originalGitEnv.committerEmail);
+	setOptionalEnv("GIT_COMMITTER_NAME", originalGitEnv.committerName);
+}
+
+function setOptionalEnv(name: string, value: string | undefined): void {
+	if (value === undefined) {
+		delete process.env[name];
+		return;
+	}
+
+	process.env[name] = value;
 }
 
 describe("parseCliArgs", () => {
@@ -243,11 +276,120 @@ describe("scaffoldProject", () => {
 		).resolves.toBe(false);
 	});
 
+	it("applies the Power Pages Kendo main template", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+
+		await scaffoldProject({
+			projectName: "power-pages-kendo",
+			target: "power-pages",
+			uiType: "kendo",
+			install: false,
+			force: false,
+			skipGit: true,
+		});
+
+		await expect(
+			fs.readFile(path.join(rootDir, "power-pages-kendo", "src", "main.tsx"), "utf8"),
+		).resolves.toContain("<AuthProvider>");
+	});
+
+	it("can initialize git when git is not skipped", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+		setGitIdentityEnv();
+
+		await scaffoldProject({
+			projectName: "git-demo",
+			target: "swa",
+			uiType: "kendo",
+			install: false,
+			force: false,
+			skipGit: false,
+		});
+
+		await expect(
+			fs.pathExists(path.join(rootDir, "git-demo", ".git")),
+		).resolves.toBe(true);
+	});
+
 	it("reports git initialization failures with the skip-git escape hatch", async () => {
 		const rootDir = await makeTempDir();
 
 		expect(() => initializeGit(path.join(rootDir, "missing"))).toThrow(
 			"rerun with --skip-git",
 		);
+	});
+});
+
+describe("main", () => {
+	it("prints help and exits without prompting", async () => {
+		process.argv = ["node", "create-ec-app", "--help"];
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process exit");
+		}) as never);
+
+		await expect(main()).rejects.toThrow("process exit");
+
+		expect(log).toHaveBeenCalledWith(expect.stringContaining("--help, -h"));
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("runs the non-interactive scaffold path", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+		process.argv = [
+			"node",
+			"create-ec-app",
+			"--project-name",
+			"main-demo",
+			"--target",
+			"swa",
+			"--ui",
+			"kendo",
+			"--no-install",
+			"--skip-git",
+		];
+
+		await main();
+
+		await expect(
+			fs.pathExists(path.join(rootDir, "main-demo", "staticwebapp.config.json")),
+		).resolves.toBe(true);
+		await expect(
+			fs.pathExists(path.join(rootDir, "main-demo", ".git")),
+		).resolves.toBe(false);
+	});
+
+	it("runs the PCF generation path", async () => {
+		const projectDir = await makeTempDir();
+		await fs.outputJson(path.join(projectDir, "package.json"), {
+			name: "main-pcf",
+		});
+		await fs.outputFile(
+			path.join(projectDir, "src", "App.tsx"),
+			"export default function App() { return null }",
+		);
+		await fs.outputFile(
+			path.join(projectDir, "dist", "main.css"),
+			".button { color: blue; }",
+		);
+		process.argv = [
+			"node",
+			"create-ec-app",
+			"--pcf-dir",
+			projectDir,
+			"--output",
+			"pcf/MainHost",
+			"--constructor",
+			"MainHost",
+		];
+
+		await main();
+
+		await expect(
+			fs.pathExists(path.join(projectDir, "pcf", "MainHost", "MainHost.pcfproj")),
+		).resolves.toBe(true);
 	});
 });
