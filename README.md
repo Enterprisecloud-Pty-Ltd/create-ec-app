@@ -5,17 +5,33 @@ CLI for scaffolding Enterprisecloud React apps from layered templates.
 ## Scaffold An App
 
 ```bash
-npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install
+npx create-ec-app@latest --project-name my-webresource --target webresource --ui shadcn-ui
+npx create-ec-app@latest --project-name my-code-app --target code-apps --ui kendo --skip-git
+npx create-ec-app@latest --project-name my-swa --target swa --ui shadcn-ui --no-install
 ```
 
-Targets include `webresource`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
+For local development in this repo:
+
+```bash
+npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install --skip-git
+```
+
+Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
+
+Useful CLI flags:
+
+- `--force`: overwrite an existing non-empty project directory.
+- `--skip-git`: skip `git init`, `git add .`, and the initial commit.
+- `--help` / `-h`: print usage and exit without prompting.
+
+By default, existing non-empty project directories fail with a clear error. Existing empty directories are reused. Git initialization still runs by default unless `--skip-git` is passed.
 
 ## Power Apps Code Apps
 
 Use the `code-apps` target to scaffold a React + Vite app that keeps the EC base template and adds Microsoft Power Apps code app support:
 
 ```bash
-npm run dev -- --project-name my-code-app --target code-apps --ui shadcn-ui --no-install
+npm run dev -- --project-name my-code-app --target code-apps --ui shadcn-ui --no-install --skip-git
 ```
 
 Compared with the base template, the Code Apps target adds:
@@ -68,28 +84,31 @@ It also documents Microsoft’s Code Apps data model:
 - Dataverse actions/functions through `npx power-apps find-dataverse-api` and `npx power-apps add-dataverse-api`
 - Runtime context through `getContext` from `@microsoft/power-apps/app`
 
-## shadcn/ui Generation
+## shadcn/ui Template
 
-The shadcn template does not vendor generated component files. During scaffolding, the CLI copies the base and UI templates, replaces tokens such as `{{APP_NAME}}`, then runs:
+The shadcn template vendors generated component source under `templates/ui/shadcn-ui/src`. Normal scaffolding copies those files like any other template layer and does not run `npx shadcn`.
 
 ```bash
-npx shadcn@latest add --all --yes --overwrite
+npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install --skip-git
 ```
 
-This keeps generated components aligned with the latest shadcn registry. The template leaves Tailwind utility names unprefixed so generated JSX and CSS stay close to the upstream shadcn output.
+That command is offline-friendly after the package is available locally; `--no-install` skips dependency installation and no scaffold-time external component generation is performed. Generated projects still include `components.json` so app owners can later run shadcn manually inside their own app if they choose.
 
-Current shadcn projects also depend on the `shadcn` package at build time because `src/index.css` imports:
+The committed snapshot pins the component source and uses exact versions in `templates/ui/shadcn-ui/package.patch.json` for dependencies directly required by those files.
 
-```css
-@import "shadcn/tailwind.css";
+Maintainers refresh the snapshot intentionally:
+
+```bash
+npm run refresh:shadcn-template
 ```
 
-That shared CSS defines shadcn's Tailwind v4 custom variants and utilities, including Radix/Base UI state and orientation variants used by controls such as sliders, accordions, scroll areas, menus, and sidebars. The app build resolves this import into `dist/main.css`.
+The refresh script uses a pinned shadcn CLI version, applies EC portal compatibility transforms, updates vendored component files, writes `SHADCN_TEMPLATE.md`, and refreshes the shadcn dependency patch.
 
-After generation, the CLI applies small compatibility fixes for app embedding:
+For shadcn changes, generate a fresh app and run a build before committing:
 
-- Radix/Base UI portals are prepared to use a PCF-local portal root when a PCF wrapper is generated.
-- Known generated selector issues are normalized so builds stay clean with current Vite/Tailwind.
+```bash
+npm run build:generated
+```
 
 ## Style Scoping
 
@@ -181,9 +200,29 @@ Useful checks before shipping template changes:
 
 ```bash
 npm run build
-npm audit --audit-level=moderate --prefix templates/base
-npm audit --audit-level=moderate --prefix templates/pcf/base
+npm test
+npm run smoke:scaffold
+npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-For shadcn changes, also generate a fresh app, run `npm run build`, generate a PCF wrapper, and run the CSS scope check against the generated PCF folder.
+`npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs and builds a smaller generated-project matrix, including a shadcn webresource.
+
+## Release Process
+
+Releases use semantic-release on pushes to `main`. The release workflow runs:
+
+```bash
+npm ci
+npm run build
+npm test
+npm run smoke:scaffold
+npm run release
+```
+
+Required repository secrets:
+
+- `GITHUB_TOKEN`: provided by GitHub Actions.
+- `NPM_TOKEN`: npm automation token with publish access.
+
+Use Conventional Commits so semantic-release can choose the release type. Git tags, GitHub releases, and the npm package version published by semantic-release are the source of truth; `package.json` is not manually bumped as part of normal development.

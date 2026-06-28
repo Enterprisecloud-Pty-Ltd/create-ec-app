@@ -15,7 +15,6 @@ import {
 import fs from "fs-extra";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 import { generatePcfFromExistingWebresource } from "./pcf.js";
-import { localizeShadcnPortals } from "./portalContainers.js";
 
 const { execSync } = await import("node:child_process");
 
@@ -41,10 +40,19 @@ interface CliArgs {
 	target?: AppTarget;
 	uiType?: UiTarget;
 	install?: boolean;
+	force?: boolean;
+	skipGit?: boolean;
 }
 
 async function main() {
-	const cliArgs = parseCliArgs(process.argv.slice(2));
+	const argv = process.argv.slice(2);
+
+	if (argv.includes("--help") || argv.includes("-h")) {
+		printHelp();
+		process.exit(0);
+	}
+
+	const cliArgs = parseCliArgs(argv);
 
 	if (cliArgs.pcfDir) {
 		const { pcfDir, ...rest } = cliArgs;
@@ -93,19 +101,25 @@ async function resolveScaffoldOptions(cliArgs: CliArgs): Promise<ScaffoldOptions
 		projectName: projectName.trim(),
 		target,
 		uiType,
+		force: cliArgs.force ?? false,
+		skipGit: cliArgs.skipGit ?? false,
 	};
 }
 
 interface ScaffoldOptions {
 	install: boolean;
+	force: boolean;
 	projectName: string;
+	skipGit: boolean;
 	target: AppTarget;
 	uiType: UiTarget;
 }
 
 async function scaffoldProject({
 	install,
+	force,
 	projectName,
+	skipGit,
 	target,
 	uiType,
 }: ScaffoldOptions) {
@@ -116,6 +130,7 @@ async function scaffoldProject({
 	const targetDir = path.join(templatesRoot, "targets", target);
 	const uiDir = path.join(templatesRoot, "ui", uiType);
 
+	await assertCanCreateProjectDir(projectDir, force);
 	await fs.copy(baseDir, projectDir);
 
 	if (fs.existsSync(targetDir)) {
@@ -136,19 +151,15 @@ async function scaffoldProject({
 		UI: uiType,
 	});
 
-	const dependenciesInstalledByUiGenerator =
-		uiType === "shadcn-ui" ? await generateShadcnUi(projectDir) : false;
-
 	//WARN: This is a special case fix for having AuthContext in Kendo for Power Pages
 	if (target === "power-pages" && uiType === "kendo") {
 		const mainTsxPath = path.join(projectDir, "src", "main.tsx");
 		await fs.writeFile(mainTsxPath, POWER_PAGES_KENDO_MAIN_TSX, "utf-8");
 	}
 
-	if (install && !dependenciesInstalledByUiGenerator) {
+	if (install) {
 		const s = spinner();
 		s.start("Running npm install...");
-		const { execSync } = await import("node:child_process");
 		execSync("npm install", { cwd: projectDir, stdio: "inherit" });
 		s.stop("Dependencies installed.");
 	}
@@ -159,34 +170,57 @@ async function scaffoldProject({
 		await fs.writeFile(gitignorePath, GIT_IGNORE, "utf-8");
 	}
 
-	const sGit = spinner();
-	sGit.start("Initializing git repository...");
-	execSync("git init", { cwd: projectDir, stdio: "ignore" });
-	execSync("git add .", { cwd: projectDir, stdio: "ignore" });
-	execSync('git commit -m "Initial commit"', {
-		cwd: projectDir,
-		stdio: "ignore",
-	});
-	sGit.stop("Git repository initialized.");
+	if (!skipGit) {
+		const sGit = spinner();
+		sGit.start("Initializing git repository...");
+		try {
+			initializeGit(projectDir);
+		} catch (error) {
+			sGit.stop("Git initialization failed.");
+			throw error;
+		}
+		sGit.stop("Git repository initialized.");
+	}
 }
 
-async function generateShadcnUi(projectDir: string): Promise<boolean> {
-	const s = spinner();
-	s.start("Generating shadcn/ui components...");
-
-	try {
-		execSync("npx shadcn@latest add --all --yes --overwrite", {
-			cwd: projectDir,
-			stdio: "inherit",
-		});
-		s.stop("shadcn/ui components generated.");
-	} catch (error) {
-		s.stop("shadcn/ui component generation failed.");
-		throw error;
+async function assertCanCreateProjectDir(
+	projectDir: string,
+	force: boolean,
+): Promise<void> {
+	if (!(await fs.pathExists(projectDir))) {
+		return;
 	}
 
-	await localizeShadcnPortals(projectDir);
-	return true;
+	const entries = await fs.readdir(projectDir);
+
+	if (entries.length === 0) {
+		return;
+	}
+
+	if (!force) {
+		throw new Error(
+			`Directory "${projectDir}" already exists and is not empty. Use --force to overwrite it.`,
+		);
+	}
+
+	log.warn(`Overwriting existing directory: ${projectDir}`);
+	await fs.remove(projectDir);
+}
+
+function initializeGit(projectDir: string): void {
+	try {
+		execSync("git init", { cwd: projectDir, stdio: "ignore" });
+		execSync("git add .", { cwd: projectDir, stdio: "ignore" });
+		execSync('git commit -m "Initial commit"', {
+			cwd: projectDir,
+			stdio: "ignore",
+		});
+	} catch (error) {
+		throw new Error(
+			"Git initialization failed. Ensure Git is installed and user.name/user.email are configured, or rerun with --skip-git.",
+			{ cause: error },
+		);
+	}
 }
 
 async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
@@ -290,7 +324,49 @@ async function promptInstallDependencies(): Promise<boolean> {
 	return shouldRunNpmInstall.run;
 }
 
-function validateProjectName(value: string): string | undefined {
+function printHelp(): void {
+	console.log(`create-ec-app
+
+Usage:
+  create-ec-app --project-name my-app --target webresource --ui shadcn-ui
+  create-ec-app --project-name my-code-app --target code-apps --ui kendo --skip-git
+  create-ec-app --pcf-dir . --output ./pcf/MyControl --namespace EC --constructor MyControl
+
+Scaffold options:
+  --project-name, --name <name>    Project folder and package name
+  --target <target>                webresource, portal, power-pages, swa, or code-apps
+  --webresource                    Shortcut for --target webresource
+  --portal                         Shortcut for --target portal
+  --power-pages                    Shortcut for --target power-pages
+  --swa                            Shortcut for --target swa
+  --code-apps, --code-app          Shortcut for --target code-apps
+  --ui <ui>                        kendo or shadcn-ui
+  --kendo                          Shortcut for --ui kendo
+  --shadcn, --shadcn-ui            Shortcut for --ui shadcn-ui
+  --install                        Run npm install after scaffolding
+  --no-install                     Skip npm install
+  --force                          Overwrite an existing non-empty project directory
+  --skip-git                       Skip git init, add, and initial commit
+
+PCF wrapper options:
+  --pcf-dir <dir>                  Existing webresource app directory
+  --output <dir>                   PCF output directory
+  --namespace <name>               PCF namespace
+  --constructor <name>             PCF control constructor name
+  --display-name <name>            PCF display name
+  --description <text>             PCF description
+  --version <version>              PCF version
+  --template <dir>                 PCF template directory
+  --layer <dir>                    Extra PCF template layer; repeatable
+  --dist <dir>                     Built webresource output directory
+
+General:
+  --help, -h                       Show this help
+`);
+}
+
+function validateProjectName(value: string | undefined): string | undefined {
+	if (value === undefined) return "Project name cannot be empty";
 	if (value.length === 0) return "Project name cannot be empty";
 	if (value.toLocaleLowerCase() !== value)
 		return "Project name must be lowercase";
@@ -358,6 +434,8 @@ function parseCliArgs(argv: string[]): CliArgs {
 		...defined("target", target),
 		...defined("uiType", uiType),
 		...defined("install", install),
+		...defined("force", has("--force") ? true : undefined),
+		...defined("skipGit", has("--skip-git") ? true : undefined),
 	};
 }
 

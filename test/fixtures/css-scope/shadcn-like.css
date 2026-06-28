@@ -1,0 +1,5 @@
+.group\/button:is(:hover, :focus),
+.recharts-dot[stroke='#fff'],
+.ec-app .dark .menu {
+	color: var(--foreground);
+}

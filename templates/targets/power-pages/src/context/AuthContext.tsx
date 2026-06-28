@@ -263,10 +263,6 @@ const AuthProviderContent = ({ children }: { children: ReactNode }) => {
 		getIdToken,
 	};
 
-	if (error) {
-		throw new Error(`Authentication error: ${error}`);
-	}
-
 	return (
 		<AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 	);

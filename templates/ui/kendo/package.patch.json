@@ -1,7 +1,7 @@
 {
 	"dependencies": {
 		"@progress/kendo-licensing": "^1.11.2",
-		"@progress/kendo-react-buttons": "^13.3.0",
-		"@progress/kendo-theme-fluent": "^12.3.0"
+		"@progress/kendo-react-buttons": "^15.0.0",
+		"@progress/kendo-theme-fluent": "^14.1.0"
 	}
 }

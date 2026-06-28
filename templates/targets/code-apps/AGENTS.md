@@ -36,7 +36,7 @@ The app supports two modes.
 - Run `npx power-apps init` before real push/data-source work.
 - Treat `power.config.example.json` as documentation only; do not rename it to bypass initialization.
 
-Do not mix this with webresource `authService.ts`, `token.json`, or Power Pages `AuthContext`.
+Do not mix this with webresource `AuthService.ts`, `token.json`, or Power Pages `AuthContext`.
 
 ## Critical Files
 

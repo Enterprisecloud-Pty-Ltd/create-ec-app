@@ -1,0 +1,20 @@
+:root,
+html,
+body {
+	--brand: red;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+.dark,
+.dark .panel {
+	color: white;
+}
+
+.button,
+.card[data-label="a,b"],
+:is(.alpha, .beta) {
+	color: blue;
+}

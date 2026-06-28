@@ -34,13 +34,13 @@ The app supports two modes.
 - Never commit real token values.
 - Never bundle `token.json` into deployment output.
 
-Do not mix the two modes. Do not duplicate runtime detection. Reuse `authService.ts`.
+Do not mix the two modes. Do not duplicate runtime detection. Reuse `AuthService.ts`.
 
 ## Critical Files
 
 | File | Rule |
 |---|---|
-| `src/services/authService.ts` | Single source of truth for runtime detection, base URL, and auth headers. |
+| `src/services/AuthService.ts` | Single source of truth for runtime detection, base URL, and auth headers. |
 | `src/main.tsx` | Preserve bootstrap, providers, and global theme/style imports. |
 | `vite.config.ts` | Preserve Dynamics-friendly output: `base: "./"`, predictable filenames, and `main.css`. |
 | `index.html` | Treat as the Dynamics integration boundary. Preserve `ClientGlobalContext.js.aspx` where present. |
@@ -183,7 +183,7 @@ Do not run broad expensive checks unless the change touches shared infrastructur
 ```ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getApiUrl, getAuthHeaders } from "@/services/authService";
+import { getApiUrl, getAuthHeaders } from "@/services/AuthService";
 
 export interface Account {
   accountid: string;

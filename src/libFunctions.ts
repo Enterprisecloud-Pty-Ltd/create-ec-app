@@ -1,6 +1,13 @@
 import path from "node:path";
 import fs from "fs-extra";
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+interface JsonObject {
+	[key: string]: JsonValue;
+}
+type JsonArray = JsonValue[];
+
 /**
  * Applies a template later onto an existing base project
  * @param { string } layerDir - the base directory of the layer to patch
@@ -25,7 +32,10 @@ export async function applyLayer(layerDir: string, projectDir: string) {
 			await fs.ensureDir(path.dirname(targetPath));
 
 			const baseJson = (await readJsonIfExists(targetPath)) ?? {};
-			const patchJson = await fs.readJson(layerPath);
+			const patchJson = (await fs.readJson(layerPath)) as unknown;
+			if (!isJsonObject(patchJson)) {
+				throw new Error(`Expected JSON object in ${layerPath}.`);
+			}
 
 			const merged = mergeJson(baseJson, patchJson);
 			await fs.writeJson(targetPath, merged, { spaces: 2 });
@@ -59,15 +69,21 @@ export async function applyLayer(layerDir: string, projectDir: string) {
  * If the file does not exist, returns `undefined` instead of throwing.
  *
  * @param {string} filePath - Absolute path to the JSON file.
- * @returns {Promise<any | undefined>} The parsed JSON object or `undefined` if the file does not exist.
+ * @returns The parsed JSON object or `undefined` if the file does not exist.
  */
 export async function readJsonIfExists(
-	filePath: string
-): Promise<any | undefined> {
+	filePath: string,
+): Promise<JsonObject | undefined> {
 	if (!(await fs.pathExists(filePath))) {
 		return undefined;
 	}
-	return fs.readJson(filePath);
+
+	const json = (await fs.readJson(filePath)) as unknown;
+	if (!isJsonObject(json)) {
+		throw new Error(`Expected JSON object in ${filePath}.`);
+	}
+
+	return json;
 }
 
 /**
@@ -81,12 +97,12 @@ export async function readJsonIfExists(
  *
  * Patch values always override base values on conflicts.
  *
- * @param {any} base - The base JSON object (from the base template).
- * @param {any} patch - The patch JSON object (from a layer).
- * @returns {any} The merged JSON result.
+ * @param base - The base JSON object (from the base template).
+ * @param patch - The patch JSON object (from a layer).
+ * @returns The merged JSON result.
  */
-export function mergeJson(base: any, patch: any): any {
-	const result: any = { ...base, ...patch };
+export function mergeJson(base: JsonObject, patch: JsonObject): JsonObject {
+	const result: JsonObject = { ...base, ...patch };
 
 	const mergeKeys = [
 		"dependencies",
@@ -96,15 +112,22 @@ export function mergeJson(base: any, patch: any): any {
 	];
 
 	for (const key of mergeKeys) {
-		if (base?.[key] || patch?.[key]) {
+		const baseValue = base[key];
+		const patchValue = patch[key];
+
+		if (isJsonObject(baseValue) || isJsonObject(patchValue)) {
 			result[key] = {
-				...(base?.[key] ?? {}),
-				...(patch?.[key] ?? {}),
+				...(isJsonObject(baseValue) ? baseValue : {}),
+				...(isJsonObject(patchValue) ? patchValue : {}),
 			};
 		}
 	}
 
 	return result;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -132,6 +155,10 @@ export async function replaceTokensRecursively(
 			try {
 				content = await fs.readFile(fullPath, "utf8");
 			} catch {
+				continue;
+			}
+
+			if (content.includes("\u0000")) {
 				continue;
 			}
 

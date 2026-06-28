@@ -1,10 +1,12 @@
 import { useAuth } from "./context/AuthContext";
+import { AuthError } from "./components/shared/AuthError";
 
 function App() {
-	const { isAuthenticated, user } = useAuth(); //INFO: User is where the token information is stored (user?.idToken)
+	const { isAuthenticated } = useAuth();
 
 	return (
 		<div className="flex h-screen flex-col items-center justify-center gap-4">
+			<AuthError />
 			{isAuthenticated ? (
 				<div>You are logged in</div>
 			) : (

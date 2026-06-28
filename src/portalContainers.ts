@@ -143,8 +143,10 @@ function addPortalHookDeclarations(source: string, filePath: string): string {
 
 		const bodyLine = findContainingFunctionBodyLine(lines, index);
 		if (bodyLine === undefined) {
+			const lineNumber = index + 1;
+			const excerpt = lines[index]?.trim() ?? "";
 			throw new Error(
-				`Could not locate a function body for a shadcn Portal in ${filePath}.`,
+				`Could not locate a function body for a shadcn Portal in ${filePath}:${lineNumber}. Line: ${excerpt}`,
 			);
 		}
 
