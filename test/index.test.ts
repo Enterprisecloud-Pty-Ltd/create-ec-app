@@ -4,8 +4,10 @@ import fs from "fs-extra";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	assertCanCreateProjectDir,
+	cleanupCodeAppsScaffold,
 	initializeGit,
 	isAppTarget,
+	isMainModule,
 	isUiTarget,
 	main,
 	parseCliArgs,
@@ -14,10 +16,12 @@ import {
 	readTarget,
 	readUiType,
 	resolveScaffoldOptions,
+	runCliEntrypoint,
 	scaffoldProject,
 	stripUndefined,
 	validateProjectName,
 } from "../src/index";
+import type { AppTarget, UiTarget } from "../src/index";
 
 const tempDirs: string[] = [];
 const originalCwd = process.cwd();
@@ -217,6 +221,69 @@ describe("CLI helper functions", () => {
 			skipGit: true,
 		});
 	});
+
+	it("defaults dependency installation off when all scaffold options are provided", async () => {
+		await expect(
+			resolveScaffoldOptions({
+				projectName: "demo",
+				target: "swa",
+				uiType: "kendo",
+			}),
+		).resolves.toEqual({
+			projectName: "demo",
+			target: "swa",
+			uiType: "kendo",
+			install: false,
+			force: false,
+			skipGit: false,
+		});
+	});
+
+	it("rejects invalid project names while resolving options", async () => {
+		await expect(
+			resolveScaffoldOptions({
+				projectName: "Bad",
+				target: "swa",
+				uiType: "kendo",
+			}),
+		).rejects.toThrow("Project name must be lowercase");
+	});
+
+	it("detects direct CLI entrypoint execution", () => {
+		const moduleFile = path.join(originalCwd, "src", "index.ts");
+
+		expect(isMainModule("", moduleFile)).toBe(false);
+		expect(isMainModule(path.join(originalCwd, "test", "index.test.ts"), moduleFile)).toBe(
+			false,
+		);
+		expect(isMainModule(moduleFile, moduleFile)).toBe(true);
+	});
+
+	it("runs entrypoint handlers only for direct CLI execution", async () => {
+		const runMain = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+
+		runCliEntrypoint(false, runMain);
+		expect(runMain).not.toHaveBeenCalled();
+
+		runCliEntrypoint(true, runMain);
+		await Promise.resolve();
+		expect(runMain).toHaveBeenCalledOnce();
+	});
+
+	it("reports entrypoint failures and exits non-zero", async () => {
+		const error = new Error("entrypoint failed");
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const exit = vi
+			.spyOn(process, "exit")
+			.mockImplementation((() => undefined) as never);
+
+		runCliEntrypoint(true, () => Promise.reject(error));
+
+		await vi.waitFor(() => {
+			expect(consoleError).toHaveBeenCalledWith(error);
+			expect(exit).toHaveBeenCalledWith(1);
+		});
+	});
 });
 
 describe("project directory safety", () => {
@@ -294,6 +361,31 @@ describe("scaffoldProject", () => {
 		).resolves.toContain("<AuthProvider>");
 	});
 
+	it("can scaffold from the base template when target and UI layers are absent", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+
+		await scaffoldProject({
+			projectName: "base-only",
+			target: "missing-target" as AppTarget,
+			uiType: "missing-ui" as UiTarget,
+			install: false,
+			force: false,
+			skipGit: true,
+		});
+
+		const projectDir = path.join(rootDir, "base-only");
+		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
+			true,
+		);
+		await expect(
+			fs.pathExists(path.join(projectDir, "staticwebapp.config.json")),
+		).resolves.toBe(false);
+		await expect(fs.pathExists(path.join(projectDir, "components.json"))).resolves.toBe(
+			false,
+		);
+	});
+
 	it("can initialize git when git is not skipped", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
@@ -318,6 +410,66 @@ describe("scaffoldProject", () => {
 
 		expect(() => initializeGit(path.join(rootDir, "missing"))).toThrow(
 			"rerun with --skip-git",
+		);
+	});
+
+	it("leaves Code Apps service and context folders when unrelated files remain", async () => {
+		const projectDir = await makeTempDir();
+		await fs.outputFile(path.join(projectDir, "token.json"), "{}");
+		await fs.outputFile(
+			path.join(projectDir, "src", "services", "AuthService.ts"),
+			"export {}",
+		);
+		await fs.outputFile(
+			path.join(projectDir, "src", "services", "keep.ts"),
+			"export {}",
+		);
+		await fs.outputFile(
+			path.join(projectDir, "src", "context", "AuthContext.tsx"),
+			"export {}",
+		);
+		await fs.outputFile(
+			path.join(projectDir, "src", "context", "keep.tsx"),
+			"export {}",
+		);
+
+		await cleanupCodeAppsScaffold(projectDir);
+
+		await expect(fs.pathExists(path.join(projectDir, "token.json"))).resolves.toBe(
+			false,
+		);
+		await expect(
+			fs.pathExists(path.join(projectDir, "src", "services", "AuthService.ts")),
+		).resolves.toBe(false);
+		await expect(
+			fs.pathExists(path.join(projectDir, "src", "services", "keep.ts")),
+		).resolves.toBe(true);
+		await expect(
+			fs.pathExists(path.join(projectDir, "src", "context", "AuthContext.tsx")),
+		).resolves.toBe(false);
+		await expect(
+			fs.pathExists(path.join(projectDir, "src", "context", "keep.tsx")),
+		).resolves.toBe(true);
+	});
+
+	it("removes empty Code Apps service and context folders", async () => {
+		const projectDir = await makeTempDir();
+		await fs.outputFile(
+			path.join(projectDir, "src", "services", "AuthService.ts"),
+			"export {}",
+		);
+		await fs.outputFile(
+			path.join(projectDir, "src", "context", "AuthContext.tsx"),
+			"export {}",
+		);
+
+		await cleanupCodeAppsScaffold(projectDir);
+
+		await expect(fs.pathExists(path.join(projectDir, "src", "services"))).resolves.toBe(
+			false,
+		);
+		await expect(fs.pathExists(path.join(projectDir, "src", "context"))).resolves.toBe(
+			false,
 		);
 	});
 });

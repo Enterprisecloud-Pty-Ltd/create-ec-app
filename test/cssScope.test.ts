@@ -65,16 +65,41 @@ describe("scopeCssForPcf", () => {
 		expect(output).toContain(`${scope} .animate-in`);
 	});
 
+	it("scopes rules inside non-keyframe at-rules", () => {
+		const output = scopeCssForPcf(
+			"@media (min-width: 640px) { .button { color: red; } }",
+			"Responsive",
+		);
+
+		expect(output).toContain(
+			'.pcf-shell-control[data-pcf-control="Responsive"] .button',
+		);
+	});
+
 	it("keeps already-scoped selectors and maps app root aliases to the host", () => {
 		const output = scopeCssForPcf(
 			`.pcf-shell-control[data-pcf-control="Existing"] .button { color: red; }
-:host, [data-ec-app-root], .ec-app[data-mode="x"] { color: blue; }`,
+:host, [data-ec-app-root], .ec-app[data-mode="x"] { color: blue; }
+.ec-app.dark, .ec-app[data-mode="x"].dark { color: white; }`,
 			"Existing",
 		);
 		const scope = '.pcf-shell-control[data-pcf-control="Existing"]';
 
 		expect(output).toContain(`${scope} .button`);
 		expect(output).toContain(`${scope} { color: blue; }`);
+		expect(output).toContain(`${scope}.dark`);
+		expect(output).toContain(`${scope} .dark`);
+	});
+
+	it("escapes control names used in CSS attribute selectors", () => {
+		const output = scopeCssForPcf(
+			".button { color: red; }",
+			'Quote"Slash\\Host',
+		);
+
+		expect(output).toContain(
+			'.pcf-shell-control[data-pcf-control="Quote\\"Slash\\\\Host"] .button',
+		);
 	});
 });
 

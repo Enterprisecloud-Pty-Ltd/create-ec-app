@@ -155,6 +155,68 @@ function DialogContent() {
 		expect(source).not.toContain("EcPortalContainer");
 	});
 
+	it("adds portal runtime imports at the top when a file has no imports", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-no-imports-"),
+		);
+		tempDirs.push(projectDir);
+		const filePath = path.join(
+			projectDir,
+			"src",
+			"components",
+			"ui",
+			"portal.tsx",
+		);
+		await fs.outputFile(
+			filePath,
+			`function PortalOnly() {
+  return <DialogPrimitive.Portal />
+}
+`,
+		);
+
+		await localizeShadcnPortals(projectDir);
+
+		const source = await fs.readFile(filePath, "utf8");
+		expect(source.startsWith('import { usePortalContainer } from "@/runtime/PortalContainer"')).toBe(
+			true,
+		);
+		expect(source).toContain("container={portalContainer ?? undefined}");
+	});
+
+	it("does not duplicate an existing portal container hook", async () => {
+		const projectDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "create-ec-app-existing-hook-"),
+		);
+		tempDirs.push(projectDir);
+		const filePath = path.join(
+			projectDir,
+			"src",
+			"components",
+			"ui",
+			"dialog.tsx",
+		);
+		await fs.outputFile(
+			filePath,
+			`import { usePortalContainer } from "@/runtime/PortalContainer"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
+
+function DialogContent() {
+  const portalContainer = usePortalContainer()
+  return <DialogPrimitive.Portal />
+}
+`,
+		);
+
+		await localizeShadcnPortals(projectDir);
+
+		const source = await fs.readFile(filePath, "utf8");
+		expect(source.match(/const portalContainer = usePortalContainer\(\)/g)).toHaveLength(
+			1,
+		);
+		expect(source).toContain("container={portalContainer ?? undefined}");
+	});
+
 	it("applies generated shadcn compatibility changes unless disabled", async () => {
 		const projectDir = await fs.mkdtemp(
 			path.join(os.tmpdir(), "create-ec-app-compat-"),

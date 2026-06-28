@@ -60,10 +60,6 @@ function scopeSingleSelector(
 ): string[] {
 	const normalized = selector.trim();
 
-	if (normalized.length === 0) {
-		return [];
-	}
-
 	if (normalized.includes(scopeSelector)) {
 		return [normalized];
 	}
@@ -100,9 +96,10 @@ function scopeSingleSelector(
 
 	const appDarkDescendant = normalized.match(/^\.ec-app(?:\[.*?\])?\s+\.dark(.*)$/);
 	if (appDarkDescendant) {
+		const darkDescendant = appDarkDescendant[1] as string;
 		return [
-			`${scopeSelector}.dark${appDarkDescendant[1] ?? ""}`,
-			`${scopeSelector} .dark${appDarkDescendant[1] ?? ""}`,
+			`${scopeSelector}.dark${darkDescendant}`,
+			`${scopeSelector} .dark${darkDescendant}`,
 		];
 	}
 

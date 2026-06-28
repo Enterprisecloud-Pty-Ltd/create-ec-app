@@ -92,25 +92,25 @@ export async function resolveScaffoldOptions(
 	const projectNameError = validateProjectName(projectName);
 	if (projectNameError) {
 		throw new Error(projectNameError);
+	} else {
+		const target = cliArgs.target ?? (await promptTarget());
+		const uiType = cliArgs.uiType ?? (await promptUiType());
+		const shouldPromptForInstall =
+			cliArgs.install === undefined &&
+			(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
+		const install = shouldPromptForInstall
+			? await promptInstallDependencies()
+			: cliArgs.install ?? false;
+
+		return {
+			install,
+			projectName: projectName.trim(),
+			target,
+			uiType,
+			force: cliArgs.force ?? false,
+			skipGit: cliArgs.skipGit ?? false,
+		};
 	}
-
-	const target = cliArgs.target ?? (await promptTarget());
-	const uiType = cliArgs.uiType ?? (await promptUiType());
-	const shouldPromptForInstall =
-		cliArgs.install === undefined &&
-		(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
-	const install = shouldPromptForInstall
-		? await promptInstallDependencies()
-		: cliArgs.install ?? false;
-
-	return {
-		install,
-		projectName: projectName.trim(),
-		target,
-		uiType,
-		force: cliArgs.force ?? false,
-		skipGit: cliArgs.skipGit ?? false,
-	};
 }
 
 export interface ScaffoldOptions {
@@ -257,12 +257,21 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	}
 }
 
-if (isMainModule()) {
-	main().catch((err) => {
+export function runCliEntrypoint(
+	isEntryPoint = isMainModule(),
+	runMain: () => Promise<void> = main,
+): void {
+	if (!isEntryPoint) {
+		return;
+	}
+
+	runMain().catch((err) => {
 		console.error(err);
 		process.exit(1);
 	});
 }
+
+runCliEntrypoint();
 
 async function promptProjectName(): Promise<string> {
 	const name = await text({
@@ -554,10 +563,15 @@ export function stripUndefined<T extends Record<string, unknown>>(
 	return Object.fromEntries(entries) as Partial<T>;
 }
 
-function isMainModule(): boolean {
-	return process.argv[1]
-		? path.resolve(process.argv[1]) === __filename
-		: false;
+export function isMainModule(
+	entryPoint: string | undefined = process.argv[1],
+	moduleFile = __filename,
+): boolean {
+	if (!entryPoint) {
+		return false;
+	}
+
+	return path.resolve(entryPoint) === moduleFile;
 }
 
 // NOTE: Constants

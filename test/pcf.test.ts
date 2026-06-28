@@ -178,6 +178,22 @@ describe("generatePcfFromExistingWebresource", () => {
 		).resolves.toBe("MinimalHost minimal-host-package");
 	});
 
+	it("rejects using the project root as the PCF output directory", async () => {
+		const projectDir = await makeBuiltWebresource();
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				output: ".",
+				controlConstructor: "RootHost",
+			}),
+		).rejects.toThrow("cannot be the webresource project root");
+
+		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
+			true,
+		);
+	});
+
 	it("fails clearly when required webresource files are missing", async () => {
 		const projectDir = await makeTempDir();
 		await fs.outputJson(path.join(projectDir, "package.json"), {

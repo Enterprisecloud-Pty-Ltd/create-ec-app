@@ -61,6 +61,18 @@ describe("mergeJson", () => {
 			nested: { keep: false },
 		});
 	});
+
+	it("keeps dependency-style merge keys object-shaped when only one side is an object", () => {
+		expect(
+			mergeJson(
+				{ dependencies: "invalid", scripts: { build: "vite build" } },
+				{ dependencies: { react: "19.2.7" }, scripts: "invalid" },
+			),
+		).toEqual({
+			dependencies: { react: "19.2.7" },
+			scripts: { build: "vite build" },
+		});
+	});
 });
 
 describe("readJsonIfExists", () => {

@@ -215,7 +215,7 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces the configured coverage thresholds. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs and builds a smaller generated-project matrix, including a shadcn webresource.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs and builds a smaller generated-project matrix, including a shadcn webresource.
 
 ## Release Process
 
