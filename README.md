@@ -18,6 +18,15 @@ npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-in
 
 Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
 
+Quick shadcn creates with dependency install:
+
+```bash
+npx create-ec-app@latest --project-name my-webresource --target webresource --ui shadcn-ui --install
+npx create-ec-app@latest --project-name my-power-pages --target power-pages --ui shadcn-ui --install
+npx create-ec-app@latest --project-name my-swa --target swa --ui shadcn-ui --install
+npx create-ec-app@latest --project-name my-code-app --target code-apps --ui shadcn-ui --install
+```
+
 Useful CLI flags:
 
 - `--force`: overwrite an existing non-empty project directory.
