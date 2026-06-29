@@ -219,19 +219,26 @@ node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 
 ## Release Process
 
-Releases use semantic-release on pushes to `main`. The release workflow runs:
+Releases use semantic-release from `.github/workflows/ci.yml` on pushes to `main`.
+The CI job runs:
 
 ```bash
 npm ci
 npm run build
 npm test
 npm run smoke:scaffold
+```
+
+After CI passes, the release job runs:
+
+```bash
+npm ci
 npm run release
 ```
 
-Required repository secrets:
+Release authentication:
 
 - `GITHUB_TOKEN`: provided by GitHub Actions.
-- `NPM_TOKEN`: npm automation token with publish access.
+- npm trusted publishing is configured for this repository's `ci.yml` workflow on npmjs.com.
 
 Use Conventional Commits so semantic-release can choose the release type. Git tags, GitHub releases, and the npm package version published by semantic-release are the source of truth; `package.json` is not manually bumped as part of normal development.
