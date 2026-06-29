@@ -60,6 +60,11 @@ try {
 		assertPath(path.join(projectDir, "package.json"), `${projectName} package.json`);
 		assertPath(path.join(projectDir, "src", "App.tsx"), `${projectName} App.tsx`);
 		assertMissing(path.join(projectDir, ".git"), `${projectName} .git directory`);
+		assertRegularFileContains(
+			path.join(projectDir, "CLAUDE.md"),
+			"@AGENTS.md",
+			`${projectName} Claude guidance pointer`,
+		);
 
 		if (ui === "shadcn-ui") {
 			assertPath(
@@ -225,6 +230,12 @@ function assertMissing(filePath, label) {
 function assertFileContains(filePath, expected, label) {
 	const source = fs.readFileSync(filePath, "utf8");
 	assert(source.includes(expected), `${label} did not contain ${expected}`);
+}
+
+function assertRegularFileContains(filePath, expected, label) {
+	const stat = fs.lstatSync(filePath);
+	assert(stat.isFile(), `${label} should be a regular file: ${filePath}`);
+	assertFileContains(filePath, expected, label);
 }
 
 function assert(condition, message) {

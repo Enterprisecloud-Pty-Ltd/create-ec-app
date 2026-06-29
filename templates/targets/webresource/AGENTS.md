@@ -234,6 +234,7 @@ export const useUpdateAccount = () => {
   });
 };
 ```
+
 ## Figma MCP
 When using the Figma MCP server, ensure that you are not just blindly copying the designs. Take note and always place a focus on the following:
 
