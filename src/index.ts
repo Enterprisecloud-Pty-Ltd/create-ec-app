@@ -15,17 +15,21 @@ import {
 import fs from "fs-extra";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 import { generatePcfFromExistingWebresource } from "./pcf.js";
-import { localizeShadcnPortals } from "./portalContainers.js";
 
 const { execSync } = await import("node:child_process");
 
-type AppTarget = "webresource" | "portal" | "power-pages" | "swa" | "code-apps";
-type UiTarget = "kendo" | "shadcn-ui";
+export type AppTarget =
+	| "webresource"
+	| "portal"
+	| "power-pages"
+	| "swa"
+	| "code-apps";
+export type UiTarget = "kendo" | "shadcn-ui";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-interface CliArgs {
+export interface CliArgs {
 	pcfDir?: string;
 	controlConstructor?: string;
 	description?: string;
@@ -41,10 +45,19 @@ interface CliArgs {
 	target?: AppTarget;
 	uiType?: UiTarget;
 	install?: boolean;
+	force?: boolean;
+	skipGit?: boolean;
 }
 
-async function main() {
-	const cliArgs = parseCliArgs(process.argv.slice(2));
+export async function main() {
+	const argv = process.argv.slice(2);
+
+	if (argv.includes("--help") || argv.includes("-h")) {
+		printHelp();
+		process.exit(0);
+	}
+
+	const cliArgs = parseCliArgs(argv);
 
 	if (cliArgs.pcfDir) {
 		const { pcfDir, ...rest } = cliArgs;
@@ -72,40 +85,48 @@ async function main() {
 	);
 }
 
-async function resolveScaffoldOptions(cliArgs: CliArgs): Promise<ScaffoldOptions> {
+export async function resolveScaffoldOptions(
+	cliArgs: CliArgs,
+): Promise<ScaffoldOptions> {
 	const projectName = (cliArgs.projectName ?? (await promptProjectName())).trim();
 	const projectNameError = validateProjectName(projectName);
 	if (projectNameError) {
 		throw new Error(projectNameError);
+	} else {
+		const target = cliArgs.target ?? (await promptTarget());
+		const uiType = cliArgs.uiType ?? (await promptUiType());
+		const shouldPromptForInstall =
+			cliArgs.install === undefined &&
+			(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
+		const install = shouldPromptForInstall
+			? await promptInstallDependencies()
+			: cliArgs.install ?? false;
+
+		return {
+			install,
+			projectName: projectName.trim(),
+			target,
+			uiType,
+			force: cliArgs.force ?? false,
+			skipGit: cliArgs.skipGit ?? false,
+		};
 	}
-
-	const target = cliArgs.target ?? (await promptTarget());
-	const uiType = cliArgs.uiType ?? (await promptUiType());
-	const shouldPromptForInstall =
-		cliArgs.install === undefined &&
-		(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
-	const install = shouldPromptForInstall
-		? await promptInstallDependencies()
-		: cliArgs.install ?? false;
-
-	return {
-		install,
-		projectName: projectName.trim(),
-		target,
-		uiType,
-	};
 }
 
-interface ScaffoldOptions {
+export interface ScaffoldOptions {
 	install: boolean;
+	force: boolean;
 	projectName: string;
+	skipGit: boolean;
 	target: AppTarget;
 	uiType: UiTarget;
 }
 
-async function scaffoldProject({
+export async function scaffoldProject({
 	install,
+	force,
 	projectName,
+	skipGit,
 	target,
 	uiType,
 }: ScaffoldOptions) {
@@ -116,6 +137,7 @@ async function scaffoldProject({
 	const targetDir = path.join(templatesRoot, "targets", target);
 	const uiDir = path.join(templatesRoot, "ui", uiType);
 
+	await assertCanCreateProjectDir(projectDir, force);
 	await fs.copy(baseDir, projectDir);
 
 	if (fs.existsSync(targetDir)) {
@@ -136,19 +158,15 @@ async function scaffoldProject({
 		UI: uiType,
 	});
 
-	const dependenciesInstalledByUiGenerator =
-		uiType === "shadcn-ui" ? await generateShadcnUi(projectDir) : false;
-
 	//WARN: This is a special case fix for having AuthContext in Kendo for Power Pages
 	if (target === "power-pages" && uiType === "kendo") {
 		const mainTsxPath = path.join(projectDir, "src", "main.tsx");
 		await fs.writeFile(mainTsxPath, POWER_PAGES_KENDO_MAIN_TSX, "utf-8");
 	}
 
-	if (install && !dependenciesInstalledByUiGenerator) {
+	if (install) {
 		const s = spinner();
 		s.start("Running npm install...");
-		const { execSync } = await import("node:child_process");
 		execSync("npm install", { cwd: projectDir, stdio: "inherit" });
 		s.stop("Dependencies installed.");
 	}
@@ -159,37 +177,60 @@ async function scaffoldProject({
 		await fs.writeFile(gitignorePath, GIT_IGNORE, "utf-8");
 	}
 
-	const sGit = spinner();
-	sGit.start("Initializing git repository...");
-	execSync("git init", { cwd: projectDir, stdio: "ignore" });
-	execSync("git add .", { cwd: projectDir, stdio: "ignore" });
-	execSync('git commit -m "Initial commit"', {
-		cwd: projectDir,
-		stdio: "ignore",
-	});
-	sGit.stop("Git repository initialized.");
+	if (!skipGit) {
+		const sGit = spinner();
+		sGit.start("Initializing git repository...");
+		try {
+			initializeGit(projectDir);
+		} catch (error) {
+			sGit.stop("Git initialization failed.");
+			throw error;
+		}
+		sGit.stop("Git repository initialized.");
+	}
 }
 
-async function generateShadcnUi(projectDir: string): Promise<boolean> {
-	const s = spinner();
-	s.start("Generating shadcn/ui components...");
-
-	try {
-		execSync("npx shadcn@latest add --all --yes --overwrite", {
-			cwd: projectDir,
-			stdio: "inherit",
-		});
-		s.stop("shadcn/ui components generated.");
-	} catch (error) {
-		s.stop("shadcn/ui component generation failed.");
-		throw error;
+export async function assertCanCreateProjectDir(
+	projectDir: string,
+	force: boolean,
+): Promise<void> {
+	if (!(await fs.pathExists(projectDir))) {
+		return;
 	}
 
-	await localizeShadcnPortals(projectDir);
-	return true;
+	const entries = await fs.readdir(projectDir);
+
+	if (entries.length === 0) {
+		return;
+	}
+
+	if (!force) {
+		throw new Error(
+			`Directory "${projectDir}" already exists and is not empty. Use --force to overwrite it.`,
+		);
+	}
+
+	log.warn(`Overwriting existing directory: ${projectDir}`);
+	await fs.remove(projectDir);
 }
 
-async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
+export function initializeGit(projectDir: string): void {
+	try {
+		execSync("git init", { cwd: projectDir, stdio: "ignore" });
+		execSync("git add .", { cwd: projectDir, stdio: "ignore" });
+		execSync('git commit -m "Initial commit"', {
+			cwd: projectDir,
+			stdio: "ignore",
+		});
+	} catch (error) {
+		throw new Error(
+			"Git initialization failed. Ensure Git is installed and user.name/user.email are configured, or rerun with --skip-git.",
+			{ cause: error },
+		);
+	}
+}
+
+export async function cleanupCodeAppsScaffold(projectDir: string): Promise<void> {
 	const pathsToRemove = [
 		"token.json",
 		"src/services/AuthService.ts",
@@ -216,10 +257,21 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	}
 }
 
-main().catch((err) => {
-	console.error(err);
-	process.exit(1);
-});
+export function runCliEntrypoint(
+	isEntryPoint = isMainModule(),
+	runMain: () => Promise<void> = main,
+): void {
+	if (!isEntryPoint) {
+		return;
+	}
+
+	runMain().catch((err) => {
+		console.error(err);
+		process.exit(1);
+	});
+}
+
+runCliEntrypoint();
 
 async function promptProjectName(): Promise<string> {
 	const name = await text({
@@ -290,7 +342,49 @@ async function promptInstallDependencies(): Promise<boolean> {
 	return shouldRunNpmInstall.run;
 }
 
-function validateProjectName(value: string): string | undefined {
+export function printHelp(): void {
+	console.log(`create-ec-app
+
+Usage:
+  create-ec-app --project-name my-app --target webresource --ui shadcn-ui
+  create-ec-app --project-name my-code-app --target code-apps --ui kendo --skip-git
+  create-ec-app --pcf-dir . --output ./pcf/MyControl --namespace EC --constructor MyControl
+
+Scaffold options:
+  --project-name, --name <name>    Project folder and package name
+  --target <target>                webresource, portal, power-pages, swa, or code-apps
+  --webresource                    Shortcut for --target webresource
+  --portal                         Shortcut for --target portal
+  --power-pages                    Shortcut for --target power-pages
+  --swa                            Shortcut for --target swa
+  --code-apps, --code-app          Shortcut for --target code-apps
+  --ui <ui>                        kendo or shadcn-ui
+  --kendo                          Shortcut for --ui kendo
+  --shadcn, --shadcn-ui            Shortcut for --ui shadcn-ui
+  --install                        Run npm install after scaffolding
+  --no-install                     Skip npm install
+  --force                          Overwrite an existing non-empty project directory
+  --skip-git                       Skip git init, add, and initial commit
+
+PCF wrapper options:
+  --pcf-dir <dir>                  Existing webresource app directory
+  --output <dir>                   PCF output directory
+  --namespace <name>               PCF namespace
+  --constructor <name>             PCF control constructor name
+  --display-name <name>            PCF display name
+  --description <text>             PCF description
+  --version <version>              PCF version
+  --template <dir>                 PCF template directory
+  --layer <dir>                    Extra PCF template layer; repeatable
+  --dist <dir>                     Built webresource output directory
+
+General:
+  --help, -h                       Show this help
+`);
+}
+
+export function validateProjectName(value: string | undefined): string | undefined {
+	if (value === undefined) return "Project name cannot be empty";
 	if (value.length === 0) return "Project name cannot be empty";
 	if (value.toLocaleLowerCase() !== value)
 		return "Project name must be lowercase";
@@ -300,7 +394,7 @@ function validateProjectName(value: string): string | undefined {
 	return undefined;
 }
 
-function parseCliArgs(argv: string[]): CliArgs {
+export function parseCliArgs(argv: string[]): CliArgs {
 	const read = (name: string) => {
 		const equalsPrefix = `${name}=`;
 		const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
@@ -358,6 +452,8 @@ function parseCliArgs(argv: string[]): CliArgs {
 		...defined("target", target),
 		...defined("uiType", uiType),
 		...defined("install", install),
+		...defined("force", has("--force") ? true : undefined),
+		...defined("skipGit", has("--skip-git") ? true : undefined),
 	};
 }
 
@@ -368,7 +464,7 @@ function defined<K extends keyof CliArgs>(
 	return value === undefined ? {} : ({ [key]: value } as Pick<CliArgs, K>);
 }
 
-function readTarget(argv: string[]): AppTarget | undefined {
+export function readTarget(argv: string[]): AppTarget | undefined {
 	const targetFlags: Array<[string, AppTarget]> = [
 		["--webresource", "webresource"],
 		["--portal", "portal"],
@@ -403,7 +499,7 @@ function readTarget(argv: string[]): AppTarget | undefined {
 	);
 }
 
-function readUiType(argv: string[]): UiTarget | undefined {
+export function readUiType(argv: string[]): UiTarget | undefined {
 	const uiFlags: Array<[string, UiTarget]> = [
 		["--kendo", "kendo"],
 		["--shadcn", "shadcn-ui"],
@@ -437,7 +533,10 @@ function readUiType(argv: string[]): UiTarget | undefined {
 	throw new Error(`Unsupported UI "${uiValue}". Use kendo, shadcn, or shadcn-ui.`);
 }
 
-function readStringOption(argv: string[], name: string): string | undefined {
+export function readStringOption(
+	argv: string[],
+	name: string,
+): string | undefined {
 	const equalsPrefix = `${name}=`;
 	const equalsValue = argv.find((arg) => arg.startsWith(equalsPrefix));
 	if (equalsValue) {
@@ -449,17 +548,30 @@ function readStringOption(argv: string[], name: string): string | undefined {
 	return value && !value.startsWith("--") ? value : undefined;
 }
 
-function isAppTarget(value: string): value is AppTarget {
+export function isAppTarget(value: string): value is AppTarget {
 	return ["webresource", "portal", "power-pages", "swa", "code-apps"].includes(value);
 }
 
-function isUiTarget(value: string): value is UiTarget {
+export function isUiTarget(value: string): value is UiTarget {
 	return ["kendo", "shadcn-ui"].includes(value);
 }
 
-function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+export function stripUndefined<T extends Record<string, unknown>>(
+	value: T,
+): Partial<T> {
 	const entries = Object.entries(value).filter(([, entryValue]) => entryValue !== undefined);
 	return Object.fromEntries(entries) as Partial<T>;
+}
+
+export function isMainModule(
+	entryPoint: string | undefined = process.argv[1],
+	moduleFile = __filename,
+): boolean {
+	if (!entryPoint) {
+		return false;
+	}
+
+	return path.resolve(entryPoint) === moduleFile;
 }
 
 // NOTE: Constants

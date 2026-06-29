@@ -8,36 +8,31 @@
 		"build": "tsc -b && vite build",
 		"build:dev": "tsc -b && vite build --mode development",
 		"lint": "eslint .",
-		"preview": "vite preview",
-		"format": "biome format --write .",
-		"lint:biome": "biome lint .",
-		"check": "biome check --write --no-errors-on-unmatched .",
-		"format:check": "biome format --check .",
-		"lint:fix": "biome lint --apply ."
+		"preview": "vite preview"
 	},
 	"dependencies": {
-		"@tailwindcss/vite": "^4.3.0",
-		"tailwindcss": "^4.3.0",
-		"@tanstack/react-query": "^5.100.14",
+		"@tailwindcss/vite": "^4.3.1",
+		"@tanstack/react-query": "^5.101.2",
 		"@types/xrm": "^9.0.94",
 		"react": "^19.2.7",
 		"react-dom": "^19.2.7",
+		"tailwindcss": "^4.3.1",
 		"zod": "^4.4.3",
 		"zustand": "^5.0.14"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@tanstack/eslint-plugin-query": "^5.100.14",
-		"@types/node": "^24.12.4",
-		"@types/react": "^19.2.16",
+		"@tanstack/eslint-plugin-query": "^5.101.2",
+		"@types/node": "^22.20.0",
+		"@types/react": "^19.2.17",
 		"@types/react-dom": "^19.2.3",
-		"@vitejs/plugin-react": "^6.0.2",
-		"eslint": "^10.4.1",
+		"@vitejs/plugin-react": "^6.0.3",
+		"eslint": "^10.6.0",
 		"eslint-plugin-react-hooks": "^7.1.1",
-		"eslint-plugin-react-refresh": "^0.5.2",
-		"globals": "^17.6.0",
-		"typescript": "~6.0.3",
-		"typescript-eslint": "^8.60.1",
-		"vite": "^8.0.16"
+		"eslint-plugin-react-refresh": "^0.5.3",
+		"globals": "^17.7.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.62.0",
+		"vite": "^8.1.0"
 	}
 }

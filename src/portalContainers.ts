@@ -123,7 +123,7 @@ function addPortalImport(source: string): string {
 		/import[\s\S]*?from\s+["'][^"']+["'];?\n|import\s+["'][^"']+["'];?\n/g;
 	let insertAt = 0;
 	for (const match of source.matchAll(importPattern)) {
-		insertAt = (match.index ?? 0) + match[0].length;
+		insertAt = (match.index as number) + match[0].length;
 	}
 
 	const importLine =
@@ -143,8 +143,10 @@ function addPortalHookDeclarations(source: string, filePath: string): string {
 
 		const bodyLine = findContainingFunctionBodyLine(lines, index);
 		if (bodyLine === undefined) {
+			const lineNumber = index + 1;
+			const excerpt = (lines[index] as string).trim();
 			throw new Error(
-				`Could not locate a function body for a shadcn Portal in ${filePath}.`,
+				`Could not locate a function body for a shadcn Portal in ${filePath}:${lineNumber}. Line: ${excerpt}`,
 			);
 		}
 
@@ -156,7 +158,7 @@ function addPortalHookDeclarations(source: string, filePath: string): string {
 			continue;
 		}
 
-		const indent = lines[bodyLine]?.match(/^(\s*)/)?.[1] ?? "";
+		const indent = (lines[bodyLine] as string).match(/^(\s*)/)![1] as string;
 		lines.splice(
 			bodyLine + 1,
 			0,
@@ -172,12 +174,12 @@ function findContainingFunctionBodyLine(
 	portalLine: number,
 ): number | undefined {
 	for (let index = portalLine; index >= 0; index -= 1) {
-		if (!/^\s*function\s+\w+/.test(lines[index] ?? "")) {
+		if (!/^\s*function\s+\w+/.test(lines[index] as string)) {
 			continue;
 		}
 
 		for (let bodyLine = index; bodyLine <= portalLine; bodyLine += 1) {
-			if (/\)\s*\{\s*$/.test(lines[bodyLine] ?? "")) {
+			if (/\)\s*\{\s*$/.test(lines[bodyLine] as string)) {
 				return bodyLine;
 			}
 		}

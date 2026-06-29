@@ -14,7 +14,7 @@ This is a Power Pages Single Page Application (SPA) built with React, Vite, and 
 
 ## Auth and API Access
 
-This SPA uses ADAL (Azure Active Directory Authentication Library) for authentication. While ADAL is deprecated by Microsoft, it remains functional for Power Pages scenarios until MSAL v2 support is available.
+This SPA uses ADAL (Azure Active Directory Authentication Library) for authentication. ADAL is deprecated by Microsoft and should not be treated as a long-term ideal path, but this template keeps the existing ADAL implementation for Power Pages scenarios until a validated MSAL v2 migration is introduced.
 
 ### Authentication Setup
 
@@ -37,6 +37,26 @@ The `AuthContext` requires the following environment variables:
 - After successful authentication, users are redirected back with tokens
 - Tokens are automatically cached and reused for subsequent requests
 - Call `logout()` to clear tokens and sign out the user
+- Auth errors are exposed as `error` on `useAuth()` and can be cleared with `clearError()`
+
+### Authentication Errors
+
+The generated app includes `src/components/shared/AuthError.tsx` and renders it near the app root. Keep that pattern if you replace the root layout:
+
+```tsx
+import { AuthError } from "@/components/shared/AuthError";
+
+function App() {
+  return (
+    <main>
+      <AuthError />
+      {/* app routes or page content */}
+    </main>
+  );
+}
+```
+
+`AuthContext` does not throw automatically when authentication fails, so the app can display a local error and let the user dismiss it.
 
 ## Example Data Fetch Using TanStack Query and AuthContext
 
@@ -156,7 +176,7 @@ export const AuthButton = () => {
   <Button>Click me</Button>;
   ```
 
-- Shadcn/ui: Components are installed and available under the `@/components` alias. Example:
+- Shadcn/ui: Components are copied from the committed template snapshot and available under the `@/components` alias. Example:
 
   ```tsx
   import { Button } from "@/components/ui/button";

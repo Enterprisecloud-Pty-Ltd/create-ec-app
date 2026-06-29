@@ -30,7 +30,7 @@ React + TypeScript template for Dynamics 365/Dataverse web resources. Generated 
 ## Key Files
 
 - `src/main.tsx`: Sets up React, Tailwind, and TanStack Query. If Kendo UI was selected, imports the chosen theme CSS (`<theme>/dist/all.css`).
-- `src/services/authService.ts`: Utilities to build API URLs and headers based on environment (inside Dynamics vs. local dev).
+- `src/services/AuthService.ts`: Utilities to build API URLs and headers based on environment (inside Dynamics vs. local dev).
 - `token.json`: Local development token store. Build is configured to treat this as external and not bundle it.
 - `index.html`: Injects `ClientGlobalContext.js.aspx` for Dynamics runtime.
 - `vite.config.ts`: Uses base `./`, disables code splitting, emits `main.css`, and places assets at the top of `dist`.
@@ -40,7 +40,7 @@ React + TypeScript template for Dynamics 365/Dataverse web resources. Generated 
 The app auto-detects whether it runs inside Dynamics 365 (uses `window.Xrm` and does not add an Authorization header) or locally (reads a bearer token from `token.json`).
 
 ```ts
-// src/services/authService.ts
+// src/services/AuthService.ts
 export const getApiUrl = (): string => {
   if (window.parent && window.parent.Xrm) {
     const clientUrl = window.Xrm.Utility.getGlobalContext().getClientUrl();
@@ -72,7 +72,7 @@ export const getAuthHeaders = async (): Promise<HeadersInit> => {
 Example usage:
 
 ```ts
-import { getApiUrl, getAuthHeaders } from "@/services/authService";
+import { getApiUrl, getAuthHeaders } from "@/services/AuthService";
 
 const res = await fetch(`${getApiUrl()}/accounts?$top=10`, {
   headers: await getAuthHeaders(),
@@ -139,7 +139,7 @@ The following example shows a minimal data service and hooks to fetch and update
 Create `src/services/accounts.ts`:
 
 ```ts
-import { getApiUrl, getAuthHeaders } from "@/services/authService";
+import { getApiUrl, getAuthHeaders } from "@/services/AuthService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface Account {
@@ -232,7 +232,7 @@ export function AccountsList() {
   <Button>Click me</Button>;
   ```
 
-- Shadcn/ui: Components are installed and available under the `@/components` alias. Example:
+- Shadcn/ui: Components are copied from the committed template snapshot and available under the `@/components` alias. Example:
 
   ```tsx
   import { Button } from "@/components/ui/button";

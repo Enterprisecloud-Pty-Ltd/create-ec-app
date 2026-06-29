@@ -37,7 +37,7 @@ The app supports two modes.
 - Use the existing `AuthContext` flow only where this template already requires it.
 - Never commit client secrets, tenant-specific secrets, or real token values.
 
-Do not mix Power Pages auth with webresource `authService.ts` or `token.json`.
+Do not mix Power Pages auth with webresource `AuthService.ts` or `token.json`.
 
 ## Critical Files
 

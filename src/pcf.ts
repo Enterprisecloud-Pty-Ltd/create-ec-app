@@ -69,6 +69,11 @@ export async function generatePcfFromExistingWebresource(
 		projectDir,
 		options.output ?? path.join("pcf", constructorName),
 	);
+	if (outputDir === projectDir) {
+		throw new Error(
+			"PCF output directory cannot be the webresource project root. Choose a subdirectory such as --output pcf/MyControl.",
+		);
+	}
 	const templateDir = path.resolve(
 		options.template ?? path.join(__dirname, "..", "templates", "pcf", "base"),
 	);
@@ -82,7 +87,7 @@ export async function generatePcfFromExistingWebresource(
 	const packageNameToken =
 		options.packageName ?? toKebabCase(constructorName);
 
-	const relToProject = toPosixPath(path.relative(outputDir, projectDir) || ".");
+	const relToProject = toPosixPath(path.relative(outputDir, projectDir));
 	const appImportPath = ensureRelativeImport(
 		toPosixPath(path.relative(outputDir, path.join(projectDir, "src", "App"))),
 	);
