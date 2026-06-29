@@ -43,6 +43,7 @@ try {
 			);
 			execFileSync("npm", ["install"], { cwd: projectDir, stdio: "inherit" });
 			execFileSync("npm", ["run", "build"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync("npm", ["run", "lint"], { cwd: projectDir, stdio: "inherit" });
 		} catch (error) {
 			keepTemp = true;
 			console.error(`Generated project kept for inspection: ${projectDir}`);
