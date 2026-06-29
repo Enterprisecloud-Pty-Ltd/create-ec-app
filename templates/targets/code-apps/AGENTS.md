@@ -101,6 +101,7 @@ Preferred shape:
 - one TanStack Query hook when components need query state
 - one mutation hook when mutation state or invalidation is needed
 - query keys colocated with the hook when reused for invalidation
+- UI that consumes async data should handle loading, error, empty, and success states when each state affects the workflow
 
 Do not create wrapper chains such as:
 
@@ -133,6 +134,13 @@ Stay consistent with the project's existing UI system.
 - Do not hand-roll custom CSS unless component props and Tailwind are not enough.
 - Keep layouts compact, scannable, responsive, and suitable for Power Apps hosting.
 
+## Accessibility
+
+- Use semantic HTML.
+- Use buttons for actions and links for navigation.
+- Keep input labels, accessible names, dialog titles, and keyboard support intact.
+- Do not remove shadcn/Radix or Kendo accessibility behavior while restyling.
+
 ## Code Shape
 
 Prefer:
@@ -142,6 +150,7 @@ Prefer:
 - existing generated services and components
 - small local helpers only when they remove real duplication or name non-obvious domain logic
 - explicit connector/table/action handling over generic frameworks
+- feature folders only when a feature owns multiple pieces such as API, hooks, components, types, or schemas
 
 Avoid:
 
@@ -151,6 +160,39 @@ Avoid:
 - excessive configuration
 - defensive wrappers around every value
 - broad refactors while adding a feature
+- moving code into shared `common` or `lib` before there is a second caller
+
+## Feature and Routing Shape
+
+Keep small apps flat. Use feature folders when a feature owns enough surface area to group its page, UI, data access, hooks, and types.
+
+Example:
+
+```text
+src/
+  features/
+    accounts/
+      pages/
+        accounts-page.tsx
+      components/
+        accounts-table.tsx
+      api/
+        accounts.api.ts
+      hooks/
+        use-accounts.ts
+      types/
+        account.types.ts
+```
+
+Use only folders that contain real files. Flatten the example when the feature is small.
+
+When React Router or another router is present:
+
+- keep route definitions in one obvious place, such as `src/routes.tsx` or `src/router/routes.tsx`
+- keep page components thin; they read route/search params and compose feature components
+- parse URL params at the route/page boundary, then pass typed values down
+- use `getContext` from `@microsoft/power-apps/app` for Power Apps host/query context instead of assuming browser URL control
+- do not add a router for a single screen that local state can handle
 
 ## Error Handling
 
