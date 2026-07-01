@@ -89,6 +89,30 @@ describe("prompted scaffold options", () => {
 		expect(promptMocks.select).toHaveBeenCalledTimes(3);
 	});
 
+	it("resolves the custom shadcn registry UI prompt", async () => {
+		promptMocks.text
+			.mockResolvedValueOnce("custom-registry-app")
+			.mockResolvedValueOnce(" https://example.com/r/registry.json ");
+		promptMocks.select
+			.mockResolvedValueOnce("swa")
+			.mockResolvedValueOnce("shadcn-registry")
+			.mockResolvedValueOnce({ run: false });
+
+		await expect(resolveScaffoldOptions({})).resolves.toEqual({
+			projectName: "custom-registry-app",
+			target: "swa",
+			uiType: "shadcn-ui",
+			shadcnRegistry: "https://example.com/r/registry.json",
+			install: false,
+			force: false,
+			skipGit: false,
+		});
+		expect(promptMocks.select).toHaveBeenCalledTimes(3);
+		expect(promptMocks.text).toHaveBeenLastCalledWith(
+			expect.objectContaining({ message: "shadcn registry.json URL" }),
+		);
+	});
+
 	it("exits cleanly when the project prompt is cancelled", async () => {
 		mockProcessExit();
 		promptMocks.text.mockResolvedValue(promptMocks.cancelValue);
@@ -114,6 +138,19 @@ describe("prompted scaffold options", () => {
 	it("exits cleanly when the UI prompt is cancelled", async () => {
 		mockProcessExit();
 		promptMocks.select.mockResolvedValue(promptMocks.cancelValue);
+
+		await expect(
+			resolveScaffoldOptions({ projectName: "demo", target: "swa" }),
+		).rejects.toThrow("process exit");
+
+		expect(promptMocks.cancel).toHaveBeenCalledWith("Operation cancelled.");
+		expect(process.exit).toHaveBeenCalledWith(0);
+	});
+
+	it("exits cleanly when the custom shadcn registry URL prompt is cancelled", async () => {
+		mockProcessExit();
+		promptMocks.select.mockResolvedValue("shadcn-registry");
+		promptMocks.text.mockResolvedValue(promptMocks.cancelValue);
 
 		await expect(
 			resolveScaffoldOptions({ projectName: "demo", target: "swa" }),

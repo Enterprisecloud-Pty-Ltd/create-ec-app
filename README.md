@@ -105,6 +105,14 @@ That command is offline-friendly after the package is available locally; `--no-i
 
 The committed snapshot pins the component source and uses exact versions in `templates/ui/shadcn-ui/package.patch.json` for dependencies directly required by those files.
 
+To scaffold shadcn files from a custom registry instead of the committed snapshot, pass a built `registry.json` URL:
+
+```bash
+npx create-ec-app@latest --project-name my-app --target webresource --ui shadcn-ui --shadcn-registry https://schalk-conradie.github.io/ec-registry/r/registry.json --no-install --skip-git
+```
+
+Custom registry scaffolding fetches every item listed in that registry catalog, writes each item file using its `target` or `path`, and merges the item `dependencies` and `devDependencies` into the generated `package.json`. It still writes `components.json`, the shadcn Tailwind CSS import, and a registry namespace so the generated app can use the same registry later.
+
 Maintainers refresh the snapshot intentionally:
 
 ```bash

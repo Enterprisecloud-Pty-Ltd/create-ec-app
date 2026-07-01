@@ -15,6 +15,10 @@ import {
 import fs from "fs-extra";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 import { generatePcfFromExistingWebresource } from "./pcf.js";
+import {
+	applyCustomShadcnRegistry,
+	normalizeRegistryUrl,
+} from "./shadcnRegistry.js";
 
 const { execSync } = await import("node:child_process");
 
@@ -25,6 +29,7 @@ export type AppTarget =
 	| "swa"
 	| "code-apps";
 export type UiTarget = "kendo" | "shadcn-ui";
+type UiPromptSelection = UiTarget | "shadcn-registry";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,6 +47,7 @@ export interface CliArgs {
 	template?: string;
 	version?: string;
 	projectName?: string;
+	shadcnRegistry?: string;
 	target?: AppTarget;
 	uiType?: UiTarget;
 	install?: boolean;
@@ -60,7 +66,7 @@ export async function main() {
 	const cliArgs = parseCliArgs(argv);
 
 	if (cliArgs.pcfDir) {
-		const { pcfDir, ...rest } = cliArgs;
+		const { pcfDir, shadcnRegistry: _shadcnRegistry, ...rest } = cliArgs;
 		const result = await generatePcfFromExistingWebresource({
 			pcfDir,
 			...stripUndefined(rest),
@@ -94,7 +100,16 @@ export async function resolveScaffoldOptions(
 		throw new Error(projectNameError);
 	} else {
 		const target = cliArgs.target ?? (await promptTarget());
-		const uiType = cliArgs.uiType ?? (await promptUiType());
+		const promptedUiOptions =
+			cliArgs.uiType === undefined
+				? await promptUiOptions(cliArgs.shadcnRegistry)
+				: { uiType: cliArgs.uiType };
+		const uiType = promptedUiOptions.uiType;
+		const shadcnRegistry =
+			cliArgs.shadcnRegistry ?? promptedUiOptions.shadcnRegistry;
+		if (shadcnRegistry !== undefined && uiType !== "shadcn-ui") {
+			throw new Error("--shadcn-registry can only be used with --ui shadcn-ui.");
+		}
 		const shouldPromptForInstall =
 			cliArgs.install === undefined &&
 			(!cliArgs.projectName || !cliArgs.target || !cliArgs.uiType);
@@ -105,6 +120,7 @@ export async function resolveScaffoldOptions(
 		return {
 			install,
 			projectName: projectName.trim(),
+			...(shadcnRegistry === undefined ? {} : { shadcnRegistry }),
 			target,
 			uiType,
 			force: cliArgs.force ?? false,
@@ -117,6 +133,7 @@ export interface ScaffoldOptions {
 	install: boolean;
 	force: boolean;
 	projectName: string;
+	shadcnRegistry?: string;
 	skipGit: boolean;
 	target: AppTarget;
 	uiType: UiTarget;
@@ -126,6 +143,7 @@ export async function scaffoldProject({
 	install,
 	force,
 	projectName,
+	shadcnRegistry,
 	skipGit,
 	target,
 	uiType,
@@ -144,7 +162,13 @@ export async function scaffoldProject({
 		await applyLayer(targetDir, projectDir);
 	}
 
-	if (fs.existsSync(uiDir)) {
+	if (uiType === "shadcn-ui" && shadcnRegistry !== undefined) {
+		await applyCustomShadcnRegistry({
+			projectDir,
+			registryUrl: shadcnRegistry,
+			templateDir: uiDir,
+		});
+	} else if (fs.existsSync(uiDir)) {
 		await applyLayer(uiDir, projectDir);
 	}
 
@@ -308,21 +332,55 @@ async function promptTarget(): Promise<AppTarget> {
 	return target;
 }
 
-async function promptUiType(): Promise<UiTarget> {
-	const uiType = await select<UiTarget>({
+interface PromptedUiOptions {
+	uiType: UiTarget;
+	shadcnRegistry?: string;
+}
+
+async function promptUiOptions(
+	existingShadcnRegistry?: string,
+): Promise<PromptedUiOptions> {
+	const selection = await select<UiPromptSelection>({
 		message: "What UI library do you want to use?",
 		options: [
 			{ label: "Kendo UI", value: "kendo" },
 			{ label: "Shadcn/UI", value: "shadcn-ui" },
+			{
+				label: "Shadcn/UI from custom registry",
+				value: "shadcn-registry",
+			},
 		],
 	});
 
-	if (isCancel(uiType)) {
+	if (isCancel(selection)) {
 		cancel("Operation cancelled.");
 		process.exit(0);
 	}
 
-	return uiType;
+	if (selection === "shadcn-registry") {
+		return {
+			uiType: "shadcn-ui",
+			shadcnRegistry:
+				existingShadcnRegistry ?? (await promptShadcnRegistryUrl()),
+		};
+	}
+
+	return { uiType: selection };
+}
+
+async function promptShadcnRegistryUrl(): Promise<string> {
+	const registryUrl = await text({
+		message: "shadcn registry.json URL",
+		placeholder: "https://example.com/r/registry.json",
+		validate: validateShadcnRegistryUrl,
+	});
+
+	if (isCancel(registryUrl)) {
+		cancel("Operation cancelled.");
+		process.exit(0);
+	}
+
+	return String(registryUrl).trim();
 }
 
 async function promptInstallDependencies(): Promise<boolean> {
@@ -348,7 +406,18 @@ export function printHelp(): void {
 Usage:
   create-ec-app --project-name my-app --target webresource --ui shadcn-ui
   create-ec-app --project-name my-code-app --target code-apps --ui kendo --skip-git
+  create-ec-app --project-name my-app --target webresource --ui shadcn-ui --shadcn-registry https://example.com/r/registry.json --no-install --skip-git
   create-ec-app --pcf-dir . --output ./pcf/MyControl --namespace EC --constructor MyControl
+
+Agent-friendly usage:
+  Provide --project-name, --target, and --ui to scaffold without prompts.
+  For custom shadcn registries, also pass --ui shadcn-ui --shadcn-registry <registry.json URL>.
+  Add --no-install --skip-git when you only need files generated.
+  Project names must be lowercase and can contain letters, numbers, hyphens, and underscores.
+
+Interactive usage:
+  Choose "Shadcn/UI from custom registry" in the UI prompt, then enter the registry.json URL.
+  Choose "Shadcn/UI" without a custom URL to use the committed template snapshot.
 
 Scaffold options:
   --project-name, --name <name>    Project folder and package name
@@ -361,6 +430,7 @@ Scaffold options:
   --ui <ui>                        kendo or shadcn-ui
   --kendo                          Shortcut for --ui kendo
   --shadcn, --shadcn-ui            Shortcut for --ui shadcn-ui
+  --shadcn-registry <url>          Install all shadcn items from a registry.json URL; requires --ui shadcn-ui
   --install                        Run npm install after scaffolding
   --no-install                     Skip npm install
   --force                          Overwrite an existing non-empty project directory
@@ -377,6 +447,7 @@ PCF wrapper options:
   --template <dir>                 PCF template directory
   --layer <dir>                    Extra PCF template layer; repeatable
   --dist <dir>                     Built webresource output directory
+  --package-name <name>            PCF package name
 
 General:
   --help, -h                       Show this help
@@ -391,6 +462,22 @@ export function validateProjectName(value: string | undefined): string | undefin
 	if (/\s/.test(value)) return "Project name cannot contain spaces";
 	if (/[^a-z0-9-_]/.test(value))
 		return "Project name can only contain letters, numbers, hyphens, and underscores";
+	return undefined;
+}
+
+export function validateShadcnRegistryUrl(
+	value: string | undefined,
+): string | undefined {
+	if (value === undefined || value.trim().length === 0) {
+		return "shadcn registry.json URL cannot be empty";
+	}
+
+	try {
+		normalizeRegistryUrl(value.trim());
+	} catch (error) {
+		return (error as Error).message;
+	}
+
 	return undefined;
 }
 
@@ -436,32 +523,39 @@ export function parseCliArgs(argv: string[]): CliArgs {
 	}
 	const install = has("--install") ? true : has("--no-install") ? false : undefined;
 
-	return {
-		...defined("pcfDir", read("--pcf-dir")),
-		...defined("controlConstructor", read("--constructor")),
-		...defined("description", read("--description")),
-		...defined("displayName", read("--display-name")),
-		...defined("dist", read("--dist")),
-		...(layers.length > 0 ? { layers } : {}),
-		...defined("namespace", read("--namespace")),
-		...defined("output", read("--output")),
-		...defined("packageName", read("--package-name")),
-		...defined("template", read("--template")),
-		...defined("version", read("--version")),
-		...defined("projectName", read("--project-name") ?? read("--name")),
-		...defined("target", target),
-		...defined("uiType", uiType),
-		...defined("install", install),
-		...defined("force", has("--force") ? true : undefined),
-		...defined("skipGit", has("--skip-git") ? true : undefined),
-	};
-}
+	const args: CliArgs = {};
+	const pcfDir = read("--pcf-dir");
+	if (pcfDir !== undefined) args.pcfDir = pcfDir;
+	const controlConstructor = read("--constructor");
+	if (controlConstructor !== undefined) args.controlConstructor = controlConstructor;
+	const description = read("--description");
+	if (description !== undefined) args.description = description;
+	const displayName = read("--display-name");
+	if (displayName !== undefined) args.displayName = displayName;
+	const dist = read("--dist");
+	if (dist !== undefined) args.dist = dist;
+	if (layers.length > 0) args.layers = layers;
+	const namespace = read("--namespace");
+	if (namespace !== undefined) args.namespace = namespace;
+	const output = read("--output");
+	if (output !== undefined) args.output = output;
+	const packageName = read("--package-name");
+	if (packageName !== undefined) args.packageName = packageName;
+	const shadcnRegistry = read("--shadcn-registry");
+	if (shadcnRegistry !== undefined) args.shadcnRegistry = shadcnRegistry;
+	const template = read("--template");
+	if (template !== undefined) args.template = template;
+	const version = read("--version");
+	if (version !== undefined) args.version = version;
+	const projectName = read("--project-name") ?? read("--name");
+	if (projectName !== undefined) args.projectName = projectName;
+	if (target !== undefined) args.target = target;
+	if (uiType !== undefined) args.uiType = uiType;
+	if (install !== undefined) args.install = install;
+	if (has("--force")) args.force = true;
+	if (has("--skip-git")) args.skipGit = true;
 
-function defined<K extends keyof CliArgs>(
-	key: K,
-	value: CliArgs[K] | undefined,
-): Pick<CliArgs, K> | Record<string, never> {
-	return value === undefined ? {} : ({ [key]: value } as Pick<CliArgs, K>);
+	return args;
 }
 
 export function readTarget(argv: string[]): AppTarget | undefined {

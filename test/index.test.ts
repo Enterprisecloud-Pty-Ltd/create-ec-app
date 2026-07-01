@@ -20,6 +20,7 @@ import {
 	scaffoldProject,
 	stripUndefined,
 	validateProjectName,
+	validateShadcnRegistryUrl,
 } from "../src/index";
 import type { AppTarget, UiTarget } from "../src/index";
 
@@ -79,6 +80,8 @@ describe("parseCliArgs", () => {
 				"--target=webresource",
 				"--ui",
 				"shadcn",
+				"--shadcn-registry",
+				"https://example.com/r/registry.json",
 				"--install",
 				"--force",
 				"--skip-git",
@@ -87,6 +90,7 @@ describe("parseCliArgs", () => {
 			projectName: "demo",
 			target: "webresource",
 			uiType: "shadcn-ui",
+			shadcnRegistry: "https://example.com/r/registry.json",
 			install: true,
 			force: true,
 			skipGit: true,
@@ -180,6 +184,24 @@ describe("CLI helper functions", () => {
 		expect(isAppTarget("bad")).toBe(false);
 		expect(isUiTarget("shadcn-ui")).toBe(true);
 		expect(isUiTarget("bad")).toBe(false);
+		expect(validateShadcnRegistryUrl(undefined)).toBe(
+			"shadcn registry.json URL cannot be empty",
+		);
+		expect(validateShadcnRegistryUrl("")).toBe(
+			"shadcn registry.json URL cannot be empty",
+		);
+		expect(validateShadcnRegistryUrl("not a url")).toContain(
+			"Invalid shadcn registry URL",
+		);
+		expect(validateShadcnRegistryUrl("file:///tmp/registry.json")).toContain(
+			"Unsupported shadcn registry URL",
+		);
+		expect(
+			validateShadcnRegistryUrl(" https://example.com/r/registry.json "),
+		).toBeUndefined();
+		expect(validateShadcnRegistryUrl("https://example.com")).toContain(
+			"Use a registry.json URL",
+		);
 	});
 
 	it("reads options and strips undefined values", () => {
@@ -197,9 +219,19 @@ describe("CLI helper functions", () => {
 		printHelp();
 
 		expect(log).toHaveBeenCalledOnce();
+		expect(log.mock.calls[0]?.[0]).toContain("Agent-friendly usage");
+		expect(log.mock.calls[0]?.[0]).toContain("Provide --project-name, --target, and --ui");
+		expect(log.mock.calls[0]?.[0]).toContain("Interactive usage");
+		expect(log.mock.calls[0]?.[0]).toContain("Shadcn/UI from custom registry");
+		expect(log.mock.calls[0]?.[0]).toContain(
+			"--ui shadcn-ui --shadcn-registry <registry.json URL>",
+		);
+		expect(log.mock.calls[0]?.[0]).toContain("--no-install --skip-git");
 		expect(log.mock.calls[0]?.[0]).toContain("--skip-git");
 		expect(log.mock.calls[0]?.[0]).toContain("--force");
 		expect(log.mock.calls[0]?.[0]).toContain("--pcf-dir");
+		expect(log.mock.calls[0]?.[0]).toContain("--package-name");
+		expect(log.mock.calls[0]?.[0]).toContain("--shadcn-registry");
 	});
 
 	it("resolves non-interactive scaffold options", async () => {
@@ -237,6 +269,36 @@ describe("CLI helper functions", () => {
 			force: false,
 			skipGit: false,
 		});
+	});
+
+	it("resolves custom shadcn registry options", async () => {
+		await expect(
+			resolveScaffoldOptions({
+				projectName: "demo",
+				target: "swa",
+				uiType: "shadcn-ui",
+				shadcnRegistry: "https://example.com/r/registry.json",
+			}),
+		).resolves.toEqual({
+			projectName: "demo",
+			target: "swa",
+			uiType: "shadcn-ui",
+			shadcnRegistry: "https://example.com/r/registry.json",
+			install: false,
+			force: false,
+			skipGit: false,
+		});
+	});
+
+	it("rejects custom shadcn registries for other UI layers", async () => {
+		await expect(
+			resolveScaffoldOptions({
+				projectName: "demo",
+				target: "swa",
+				uiType: "kendo",
+				shadcnRegistry: "https://example.com/r/registry.json",
+			}),
+		).rejects.toThrow("--shadcn-registry can only be used with --ui shadcn-ui");
 	});
 
 	it("rejects invalid project names while resolving options", async () => {

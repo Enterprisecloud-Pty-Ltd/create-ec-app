@@ -3,7 +3,7 @@ import fs from "fs-extra";
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonObject | JsonArray;
-interface JsonObject {
+export interface JsonObject {
 	[key: string]: JsonValue;
 }
 type JsonArray = JsonValue[];
