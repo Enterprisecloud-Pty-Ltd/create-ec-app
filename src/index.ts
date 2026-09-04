@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -665,7 +666,11 @@ export function isMainModule(
 		return false;
 	}
 
-	return path.resolve(entryPoint) === moduleFile;
+	try {
+		return realpathSync(path.resolve(entryPoint)) === realpathSync(moduleFile);
+	} catch {
+		return false;
+	}
 }
 
 // NOTE: Constants

@@ -318,7 +318,21 @@ describe("CLI helper functions", () => {
 		expect(isMainModule(path.join(originalCwd, "test", "index.test.ts"), moduleFile)).toBe(
 			false,
 		);
+		expect(isMainModule(path.join(originalCwd, "missing-entrypoint"), moduleFile)).toBe(
+			false,
+		);
 		expect(isMainModule(moduleFile, moduleFile)).toBe(true);
+	});
+
+	it("detects CLI entrypoint execution through an npm bin symlink", async () => {
+		const rootDir = await makeTempDir();
+		const moduleFile = path.join(rootDir, "index.js");
+		const binLink = path.join(rootDir, "create-ec-app");
+
+		await fs.writeFile(moduleFile, "");
+		await fs.symlink(moduleFile, binLink);
+
+		expect(isMainModule(binLink, moduleFile)).toBe(true);
 	});
 
 	it("runs entrypoint handlers only for direct CLI execution", async () => {
