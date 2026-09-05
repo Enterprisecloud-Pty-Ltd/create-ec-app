@@ -1,8 +1,12 @@
-# Development tooling
+# Tooling and maintenance
 
-The app uses TypeScript **7.0.2** and Oxlint **1.81.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
+The generated apps use TypeScript **7.0.2** and Oxlint **1.81.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
 
-## Everyday commands
+The CLI uses `typescript@7.0.2` directly; its editor settings select `node_modules/typescript`. The generated apps use the compatibility aliases described below. App-specific instructions are shipped from [templates/base/docs/tooling.md](../templates/base/docs/tooling.md).
+
+For dependency maintenance, invoke `$update-templates` in this repository. Its instructions live at [.agents/skills/update-templates/SKILL.md](../.agents/skills/update-templates/SKILL.md).
+
+## Generated app commands
 
 ```bash
 npm ci                 # after the initial npm install has produced your app's lockfile
@@ -46,3 +50,20 @@ Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded fr
 ## PCF exception
 
 Generated PCF wrappers retain **TypeScript 5.9** and Microsoft's `pcf-scripts` build/lint tooling. Their webpack/ts-loader integration needs the older TypeScript API. Keep that compiler separate until the PCF toolchain explicitly supports TypeScript 7. Open the PCF directory separately in VS Code to use its supplied legacy TypeScript settings. Rebuild the webresource and regenerate its PCF wrapper whenever shared source or CSS changes.
+
+## Repository checks and handover record
+
+Run from the `create-ec-app` repository root:
+
+```bash
+npm ci
+npm run check
+npm run smoke:scaffold
+npm run build:generated
+```
+
+`check` includes CLI typechecking, lint, and unit coverage. `build:generated` checks four targets with both UI libraries, valid TypeScript dependency trees, both PCF wrappers, CSS scoping, and negative/positive lint fixtures. CI is configured for Node 22 and 26; merging a release-producing commit to `main` can publish to npm.
+
+The 2026-09-05 local validation used Node 26.8.1: 85 unit tests passed with 100% coverage, all eight app builds/lints passed, and both PCF wrappers and CSS checks passed. Dependency lifecycle scripts were disabled for that local run; Kendo license activation and live Microsoft-hosted deployments were not verified. This is a dated baseline, not evidence for a future upgrade.
+
+When maintaining tooling, update this guide and the generated app guide where behavior changes. Add a dated entry to the root `AGENTS.md` changelog covering versions changed, compatibility exceptions, supporting source links, checks run, and any deferred upgrade's concrete recheck condition. Generated targets have their own `AGENTS.md` changelog for app-facing changes.

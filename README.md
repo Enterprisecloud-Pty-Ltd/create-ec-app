@@ -18,7 +18,7 @@ npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-in
 
 Node 26 is supported alongside Node 22. CI checks both versions, including the generated-project build workflow. The CLI and generated apps compile with TypeScript 7 and lint with Oxlint. PCF wrappers retain TypeScript 5.9 for compatibility with Microsoft's build tools.
 
-See the shared [tooling and handover guide](templates/base/TOOLING.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
+See the shared [tooling and handover guide](docs/tooling.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
 
 Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
 
@@ -143,7 +143,7 @@ To refresh template dependency ranges and lockfiles:
 bash update-templates.sh
 ```
 
-The script updates compatible minor dependency ranges and lockfiles, stops on errors, and avoids installing template `node_modules`. It preserves the TypeScript/compiler-engine pins and leaves the shadcn snapshot to `npm run refresh:shadcn-template`, which updates source and dependencies together. Review compiler and engine upgrades manually using the [tooling guide](templates/base/TOOLING.md).
+The script updates compatible minor dependency ranges and lockfiles, stops on errors, and avoids installing template `node_modules`. It preserves the TypeScript/compiler-engine pins and leaves the shadcn snapshot to `npm run refresh:shadcn-template`, which updates source and dependencies together. Review compiler and engine upgrades manually using the [tooling guide](docs/tooling.md).
 
 ## Generate a PCF Control
 

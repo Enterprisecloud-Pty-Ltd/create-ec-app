@@ -201,4 +201,4 @@ The `powerpages.config.json` file defines your site configuration, including out
 
 ## Development tooling
 
-See [TOOLING.md](TOOLING.md) for TypeScript 7, Oxlint, editor setup, and dependency maintenance. Run `npm run check` before committing and `npm run build` before deploying.
+See [docs/tooling.md](docs/tooling.md) for TypeScript 7, Oxlint, editor setup, and dependency maintenance. Run `npm run check` before committing and `npm run build` before deploying.
