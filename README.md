@@ -16,6 +16,10 @@ For local development in this repo:
 npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install --skip-git
 ```
 
+Node 26 is supported alongside Node 22. CI checks both versions, including the generated-project build workflow. The CLI and generated apps compile with TypeScript 7 and lint with Oxlint. PCF wrappers retain TypeScript 5.9 for compatibility with Microsoft's build tools.
+
+See the shared [tooling and handover guide](templates/base/TOOLING.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
+
 Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
 
 Quick shadcn creates with dependency install:
@@ -139,7 +143,7 @@ To refresh template dependency ranges and lockfiles:
 bash update-templates.sh
 ```
 
-The script updates `package.patch.json` files, template `package.json` files, installs dependencies to refresh lockfiles, then removes template `node_modules` directories.
+The script updates compatible minor dependency ranges and lockfiles, stops on errors, and avoids installing template `node_modules`. It preserves the TypeScript/compiler-engine pins and leaves the shadcn snapshot to `npm run refresh:shadcn-template`, which updates source and dependencies together. Review compiler and engine upgrades manually using the [tooling guide](templates/base/TOOLING.md).
 
 ## Generate a PCF Control
 
@@ -223,7 +227,9 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints a smaller generated-project matrix, including a shadcn webresource.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests eight deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
+
+Run `npm run check` for the CLI's typecheck, Oxlint, and unit tests. VS Code recommendations and settings are supplied for the CLI and generated apps.
 
 ## Release Process
 

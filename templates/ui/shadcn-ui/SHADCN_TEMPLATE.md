@@ -4,7 +4,7 @@ This template contains committed shadcn component source.
 
 Generated with:
 
-- shadcn CLI: 4.12.0
+- shadcn CLI: 4.21.0
 - style: radix-nova
 - base color: neutral
 - Tailwind: v4

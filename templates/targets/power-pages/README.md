@@ -198,3 +198,7 @@ Power Pages code sites support continuous deployment workflows via the Power Pla
 ## Configuration
 
 The `powerpages.config.json` file defines your site configuration, including output paths and landing page settings. Adjust this file to match your project and deployment conventions.
+
+## Development tooling
+
+See [TOOLING.md](TOOLING.md) for TypeScript 7, Oxlint, editor setup, and dependency maintenance. Run `npm run check` before committing and `npm run build` before deploying.

@@ -325,3 +325,7 @@ What gets generated:
 ## Notes
 
 - If you change the build, ensure code splitting stays disabled and asset names remain predictable to simplify web resource updates.
+
+## Development tooling
+
+See [TOOLING.md](TOOLING.md) for TypeScript 7, Oxlint, editor setup, and dependency maintenance. Run `npm run check` before committing and `npm run build` before deploying.

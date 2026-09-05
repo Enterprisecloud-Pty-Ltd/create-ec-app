@@ -244,3 +244,7 @@ Use the npm CLI unless you specifically need a PAC CLI option that has not moved
 - [Get context data](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/retrieve-context)
 - [Use environment variables in data sources](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/use-environment-variables)
 - [Application lifecycle management for code apps](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/alm)
+
+## Development tooling
+
+See [TOOLING.md](TOOLING.md) for TypeScript 7, Oxlint, editor setup, and dependency maintenance. Run `npm run check` before committing and `npm run build` before deploying.

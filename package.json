@@ -16,7 +16,11 @@
 		"build:generated": "node scripts/build-generated.mjs",
 		"refresh:shadcn-template": "tsx scripts/refresh-shadcn-template.ts",
 		"release": "semantic-release",
-		"prepublishOnly": "npm run build"
+		"prepublishOnly": "npm run build",
+		"lint": "oxlint src scripts test",
+		"lint:fix": "npm run lint -- --fix",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"check": "npm run typecheck && npm run lint && npm test"
 	},
 	"keywords": [
 		"react",
@@ -44,23 +48,24 @@
 	"author": "Schalk Conradie",
 	"type": "module",
 	"dependencies": {
-		"@clack/prompts": "^1.6.0",
-		"fs-extra": "^11.3.5",
-		"postcss": "^8.5.16"
+		"@clack/prompts": "^1.7.0",
+		"fs-extra": "^11.4.0",
+		"postcss": "^8.5.28"
 	},
 	"devDependencies": {
 		"@semantic-release/commit-analyzer": "^13.0.1",
-		"@semantic-release/github": "^12.0.8",
+		"@semantic-release/github": "^12.0.9",
 		"@semantic-release/npm": "^13.1.5",
 		"@semantic-release/release-notes-generator": "^14.1.1",
 		"@types/fs-extra": "^11.0.4",
-		"@types/node": "^22.20.0",
-		"@vitest/coverage-v8": "^4.1.9",
-		"semantic-release": "^25.0.5",
-		"ts-node": "^10.9.2",
-		"tsx": "^4.22.4",
-		"typescript": "^6.0.3",
-		"vitest": "^4.1.9"
+		"@types/node": "^26.4.1",
+		"@vitest/coverage-v8": "^4.1.11",
+		"semantic-release": "^25.0.9",
+		"tsx": "^4.23.13",
+		"typescript": "7.0.2",
+		"vitest": "^4.1.11",
+		"oxlint": "^1.81.0",
+		"oxlint-tsgolint": "7.0.2001"
 	},
 	"repository": {
 		"type": "git",

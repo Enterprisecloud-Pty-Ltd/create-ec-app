@@ -1,12 +1,11 @@
 import {
-	createContext,
 	type ReactNode,
 	useCallback,
-	useContext,
 	useEffect,
 	useRef,
 	useState,
 } from "react";
+import { AuthContext, type AADUserInfo } from "./useAuth";
 
 // NOTE: ADAL is deprecated. Prefer migrating to MSAL V2 when it is available
 // Env vars required:
@@ -26,17 +25,6 @@ if (!AAD_CLIENT_ID)
 	console.warn(
 		"VITE_AAD_CLIENT_ID is not set. Entra (ADAL) login will fail."
 	);
-
-interface AADUserInfo {
-	userName?: string;
-	profile?: Record<string, unknown>;
-	idToken?: string;
-	displayableId?: string;
-	name?: string;
-	givenName?: string;
-	familyName?: string;
-	username?: string;
-}
 
 declare global {
 	interface Window {
@@ -58,26 +46,6 @@ interface ADALContext {
 	login: () => void;
 	logOut: () => void;
 }
-
-interface AuthContextType {
-	isAuthenticated: boolean;
-	user: AADUserInfo | null;
-	login: () => Promise<void> | void;
-	logout: () => void;
-	error: string | null;
-	clearError: () => void;
-	getIdToken: () => Promise<string | null>;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export const useAuth = () => {
-	const context = useContext(AuthContext);
-	if (!context) {
-		throw new Error("useAuth must be used within an AuthProvider");
-	}
-	return context;
-};
 
 interface AuthProviderProps {
 	children: ReactNode;
