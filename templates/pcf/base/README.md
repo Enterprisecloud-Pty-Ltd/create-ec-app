@@ -2,6 +2,8 @@
 
 This folder was generated from the webresource source using the checked-in PCF base template.
 
+This wrapper deliberately uses TypeScript 5.9 with Microsoft's `pcf-scripts`, whose webpack/ts-loader integration requires the older compiler API. The source webresource uses TypeScript 7 and Oxlint independently. Do not upgrade the wrapper's TypeScript major until the PCF toolchain supports it. Open this folder separately in VS Code and select its workspace TypeScript version.
+
 ## Build
 
 ```bash

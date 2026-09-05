@@ -232,3 +232,17 @@ When using the Figma MCP server, ensure that you are not just blindly copying th
 - Ensure responsiveness on all screen sizes
 - If there are icons as part of the design, use those, don't blindly look for Lucide-React equivalents.
 - Use the exact colours in the design. Don't make up your own.
+
+## Tooling and maintenance
+
+Read [docs/tooling.md](docs/tooling.md) before changing compiler, lint, build, or UI dependencies. This path is relative to the generated application's root; the source guide lives in `templates/base/docs/tooling.md` in `create-ec-app`. It covers the TypeScript compatibility aliases, editor setup, and separate PCF toolchain. For shared template upgrades, use `$update-templates` in the `create-ec-app` repository.
+
+## Changelog
+
+Keep dated entries for material changes to this app's tooling or agent instructions. Record the reason and checks performed; label inherited template history separately from changes made in this app.
+
+### 2026-09-05 — Template baseline
+
+- Adopted TypeScript 7 and Oxlint while retaining React Hooks, Fast Refresh, React Compiler, and TanStack Query lint protection.
+- Added editor settings and `docs/tooling.md`; PCF wrappers retain their separate TypeScript 5.9 toolchain.
+- The generator's Node 26 validation passed all eight target/UI builds and lint checks, both PCF wrappers, and lint regression fixtures. This does not verify this application's future changes or live deployment.
