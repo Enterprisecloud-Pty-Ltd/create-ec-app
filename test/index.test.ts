@@ -417,6 +417,13 @@ describe("scaffoldProject", () => {
 		await expect(
 			fs.pathExists(path.join(projectDir, "src", "services", "AuthService.ts")),
 		).resolves.toBe(false);
+
+		const agents = await fs.readFile(path.join(projectDir, "AGENTS.md"), "utf8");
+		expect(agents).toContain("Power Apps-hosted code app");
+		expect(agents).toContain("split the Power Apps host shell from the React surface");
+		expect(agents).toContain("get_design_context");
+		expect(agents).not.toContain("{{FIGMA_HOST}}");
+		expect(agents).not.toContain("<!-- figma-host -->");
 	});
 
 	it("applies the Power Pages Kendo main template", async () => {
@@ -435,6 +442,14 @@ describe("scaffoldProject", () => {
 		await expect(
 			fs.readFile(path.join(rootDir, "power-pages-kendo", "src", "main.tsx"), "utf8"),
 		).resolves.toContain("<AuthProvider>");
+
+		const agents = await fs.readFile(
+			path.join(rootDir, "power-pages-kendo", "AGENTS.md"),
+			"utf8",
+		);
+		expect(agents).toContain("src/context/AuthContext.tsx");
+		expect(agents).toContain("split Power Pages site header");
+		expect(agents).toContain("local `/_api` proxy smoke test");
 	});
 
 	it("can scaffold from the base template when target and UI layers are absent", async () => {
@@ -460,6 +475,9 @@ describe("scaffoldProject", () => {
 		await expect(fs.pathExists(path.join(projectDir, "components.json"))).resolves.toBe(
 			false,
 		);
+		await expect(fs.pathExists(path.join(projectDir, "AGENTS.md"))).resolves.toBe(
+			false,
+		);
 	});
 
 	it("can initialize git when git is not skipped", async () => {
@@ -479,6 +497,10 @@ describe("scaffoldProject", () => {
 		await expect(
 			fs.pathExists(path.join(rootDir, "git-demo", ".git")),
 		).resolves.toBe(true);
+
+		const agents = await fs.readFile(path.join(rootDir, "git-demo", "AGENTS.md"), "utf8");
+		expect(agents).toContain("There is no host chrome. The Figma frame is the app.");
+		expect(agents).toContain("SWA CLI smoke test");
 	});
 
 	it("reports git initialization failures with the skip-git escape hatch", async () => {
