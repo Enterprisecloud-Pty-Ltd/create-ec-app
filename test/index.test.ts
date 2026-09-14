@@ -448,6 +448,7 @@ describe("scaffoldProject", () => {
 			"utf8",
 		);
 		expect(agents).toContain("src/context/AuthContext.tsx");
+		expect(agents).toContain("root-relative `/_api/...` URLs");
 		expect(agents).toContain("split Power Pages site header");
 		expect(agents).toContain("local `/_api` proxy smoke test");
 	});

@@ -46,7 +46,7 @@ Do not replace Vite, add SSR, add Next.js, change the code-site output shape, or
 
 Prefer direct Power Pages Web API calls.
 
-- Use relative `_api/...` URLs.
+- Use root-relative `/_api/...` URLs.
 - Use the existing auth context only where the current template flow already uses it.
 - Handle Power Pages request verification/CSRF where the portal Web API requires it.
 - Put `fetch` in service files, not UI components.
