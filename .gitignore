@@ -100,3 +100,6 @@ test-*/
 test*/
 !test/
 !test/**
+
+# Generated sample projects
+mock-data-webresource/
