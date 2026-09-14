@@ -277,9 +277,20 @@ export const useUpdateAccount = () => {
 };
 ```
 
-## Figma MCP
-When using the Figma MCP server, ensure that you are not just blindly copying the designs. Take note and always place a focus on the following:
+## Figma implementation
 
-- Ensure responsiveness on all screen sizes
-- If there are icons as part of the design, use those, don't blindly look for Lucide-React equivalents.
-- Use the exact colours in the design. Don't make up your own.
+When implementing or reviewing a Figma design, treat Figma as the visual source of truth.
+
+- Query the target frame with `get_design_context` before editing code.
+- If the response is sparse, drill into the relevant child nodes. Do not infer missing values from screenshots.
+- Read exact colours, typography, dimensions, spacing, borders, radii, shadows and component states from Figma.
+- Download and use the exported Figma asset for every icon or image unless an existing project asset is visually identical.
+- Do not substitute Unicode characters, library icons or hand-authored SVG paths based only on a similar name or appearance.
+- Adapt Figma output to the project's framework and component library without changing the visual specification.
+- Confirm that the requested font is actually rendered. Declaring a font family is not sufficient if the browser falls back to another font.
+- Preserve the design's hierarchy and placement. Do not move, merge, remove or reinterpret elements unless the user explicitly requests a design change.
+- Keep responsive behaviour functional where Figma does not define every viewport, while preserving the exact reference layout at its documented viewport.
+- Before reporting completion, compare the running UI with Figma at the reference viewport and verify key computed styles and dimensions in the browser.
+- Do not describe a UI as matching Figma exactly while any visible value or asset is inferred, approximated or unverified.
+
+For a full-screen Figma design implemented as an embedded web resource, clearly establish which surrounding elements are supplied by the host application and which belong to the web resource before implementation.
