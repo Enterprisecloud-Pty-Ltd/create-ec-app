@@ -65,6 +65,11 @@ try {
 			"@AGENTS.md",
 			`${projectName} Claude guidance pointer`,
 		);
+		assertRegularFileContains(
+			path.join(projectDir, "AGENTS.md"),
+			"get_design_context",
+			`${projectName} Figma implementation rules`,
+		);
 
 		if (ui === "shadcn-ui") {
 			assertPath(
@@ -114,6 +119,11 @@ try {
 				"cssCodeSplit: false",
 				`${projectName} webresource cssCodeSplit config`,
 			);
+			assertFileContains(
+				path.join(projectDir, "AGENTS.md"),
+				"split Dynamics chrome",
+				`${projectName} webresource Figma host boundary`,
+			);
 		}
 
 		if (target === "power-pages") {
@@ -125,6 +135,11 @@ try {
 				path.join(projectDir, "src", "components", "shared", "AuthError.tsx"),
 				`${projectName} power pages auth error component`,
 			);
+			assertFileContains(
+				path.join(projectDir, "AGENTS.md"),
+				"split Power Pages site header",
+				`${projectName} Power Pages Figma host boundary`,
+			);
 		}
 
 		if (target === "swa") {
@@ -135,6 +150,11 @@ try {
 			assertPath(
 				path.join(projectDir, "swa-cli.config.json"),
 				`${projectName} swa-cli.config.json`,
+			);
+			assertFileContains(
+				path.join(projectDir, "AGENTS.md"),
+				"There is no host chrome. The Figma frame is the app.",
+				`${projectName} SWA Figma host boundary`,
 			);
 		}
 
@@ -152,6 +172,11 @@ try {
 			assertMissing(
 				path.join(projectDir, "src", "services", "AuthService.ts"),
 				`${projectName} webresource auth service`,
+			);
+			assertFileContains(
+				path.join(projectDir, "AGENTS.md"),
+				"split the Power Apps host shell from the React surface",
+				`${projectName} Code Apps Figma host boundary`,
 			);
 		}
 	}

@@ -1,6 +1,6 @@
 # Working on create-ec-app
 
-This repository contains the CLI and layered templates, rather than one generated application. `templates/base` is shared across all targets and UI libraries; `templates/targets` and `templates/ui` supply overlays. `templates/pcf/base` is a separate Microsoft PCF toolchain. Target-specific `AGENTS.md` files are also copied into generated apps.
+This repository contains the CLI and layered templates, rather than one generated application. `templates/base` is shared across all targets and UI libraries; `templates/targets` and `templates/ui` supply overlays. `templates/pcf/base` is a separate Microsoft PCF toolchain. Generated apps receive a composed `AGENTS.md` from `templates/agents/shared.md` plus a host overlay in `templates/agents/hosts`.
 
 ## Tooling
 
@@ -24,3 +24,8 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Added editor settings, release gates for Node 22/26, `docs/tooling.md`, app guides in generated `docs/` folders, and the repository `update-templates` skill.
 - Node 26.8.1 validation passed 85 unit tests with 100% coverage, all eight app builds/lints, both PCF builds and CSS scoping, lint regression fixtures, and packed CLI scaffolding. Local dependency lifecycle scripts were disabled; license activation and live deployments remain unverified.
 - Handover-file validation passed: skill frontmatter validation, repository links, npm package contents, scaffold smoke, and documentation references in all eight generated apps.
+
+### 2026-09-14 — Generated AGENTS.md composition
+
+- Scaffold now composes generated `AGENTS.md` from `templates/agents/shared.md` and `templates/agents/hosts/{target}.md` instead of copying `templates/targets/*/AGENTS.md`.
+- Shared generated guidance includes Figma as the visual source of truth, host-chrome boundaries per target, and the TypeScript 7 / Oxlint tooling changelog inherited from the 2026-09-05 template baseline.
