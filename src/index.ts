@@ -14,6 +14,7 @@ import {
 	text,
 } from "@clack/prompts";
 import fs from "fs-extra";
+import { writeScaffoldAgentsMarkdown } from "./agentsMd.js";
 import { applyLayer, replaceTokensRecursively } from "./libFunctions.js";
 import { generatePcfFromExistingWebresource } from "./pcf.js";
 import {
@@ -162,6 +163,8 @@ export async function scaffoldProject({
 	if (fs.existsSync(targetDir)) {
 		await applyLayer(targetDir, projectDir);
 	}
+
+	await writeScaffoldAgentsMarkdown(projectDir, target, templatesRoot);
 
 	if (uiType === "shadcn-ui" && shadcnRegistry !== undefined) {
 		await applyCustomShadcnRegistry({
