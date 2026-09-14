@@ -13,9 +13,13 @@ let keepTemp = false;
 
 const matrix = [
 	["webresource", "kendo"],
+	["power-pages", "kendo"],
 	["swa", "kendo"],
 	["code-apps", "kendo"],
 	["webresource", "shadcn-ui"],
+	["power-pages", "shadcn-ui"],
+	["swa", "shadcn-ui"],
+	["code-apps", "shadcn-ui"],
 ];
 
 try {
@@ -44,6 +48,21 @@ try {
 			execFileSync("npm", ["install"], { cwd: projectDir, stdio: "inherit" });
 			execFileSync("npm", ["run", "build"], { cwd: projectDir, stdio: "inherit" });
 			execFileSync("npm", ["run", "lint"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync("npm", ["ls", "typescript", "@typescript/native"], { cwd: projectDir, stdio: "inherit" });
+			if (target === "webresource") {
+				const pcfDir = path.join(tempRoot, `pcf-${ui}`);
+				execFileSync(process.execPath, [cliPath, "--pcf-dir", projectDir,
+					"--output", pcfDir, "--namespace", "EC", "--constructor", "BuildCheck"],
+					{ cwd: projectDir, stdio: "inherit" });
+				execFileSync("npm", ["ci"], { cwd: pcfDir, stdio: "inherit" });
+				execFileSync("npm", ["run", "build"], { cwd: pcfDir, stdio: "inherit" });
+				execFileSync(process.execPath, [path.join(repoRoot, "scripts/check-generated-css-scope.mjs"), pcfDir],
+					{ cwd: repoRoot, stdio: "inherit" });
+				if (ui === "shadcn-ui") {
+					execFileSync(process.execPath, [path.join(repoRoot, "scripts/check-generated-lint.mjs"), projectDir],
+						{ cwd: repoRoot, stdio: "inherit" });
+				}
+			}
 		} catch (error) {
 			keepTemp = true;
 			console.error(`Generated project kept for inspection: ${projectDir}`);

@@ -1,6 +1,7 @@
 name: Generated Build
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     - cron: "0 2 * * 1"
@@ -8,6 +9,12 @@ on:
 jobs:
   generated-build:
     runs-on: ubuntu-24.04
+    env:
+      PP_TOOLS_TELEMETRY_OPTOUT: "true"
+
+    strategy:
+      matrix:
+        node-version: [22.x, 26.x]
 
     steps:
       - name: Checkout
@@ -16,7 +23,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 22.x
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Install dependencies

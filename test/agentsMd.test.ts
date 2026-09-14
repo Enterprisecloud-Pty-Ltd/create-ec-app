@@ -177,6 +177,8 @@ describe("writeScaffoldAgentsMarkdown", () => {
 			expect(composed, target).toContain("## Purpose");
 			expect(composed, target).toContain("## UI");
 			expect(composed, target).toContain("get_design_context");
+			expect(composed, target).toContain("## Tooling and maintenance");
+			expect(composed, target).toContain("docs/tooling.md");
 			expect(composed, target).not.toContain("{{FIGMA_HOST}}");
 			expect(composed, target).not.toContain("{{CHECKS_EXTRA}}");
 			expect(composed, target).not.toContain("<!-- figma-host -->");

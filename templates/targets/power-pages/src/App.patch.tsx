@@ -1,4 +1,4 @@
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "./context/useAuth";
 import { AuthError } from "./components/shared/AuthError";
 
 function App() {

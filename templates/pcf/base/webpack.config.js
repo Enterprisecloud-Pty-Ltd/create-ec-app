@@ -9,6 +9,10 @@ module.exports = {
 			"@": path.resolve(__dirname, "{{PROJECT_SRC_ALIAS}}"),
 			react: path.resolve(__dirname, "{{PROJECT_REACT_ALIAS}}"),
 			"react-dom": path.resolve(__dirname, "{{PROJECT_REACT_DOM_ALIAS}}"),
+			"@tanstack/react-query": path.resolve(
+				projectSrcPath,
+				"../node_modules/@tanstack/react-query",
+			),
 		},
 	},
 	plugins: [

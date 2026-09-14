@@ -14,6 +14,7 @@ jobs:
       matrix:
         node-version:
           - 22.x
+          - 26.x
 
     steps:
       - name: Checkout
@@ -34,12 +35,18 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Lint
+        run: npm run lint
+
       - name: Scaffold smoke
         run: npm run smoke:scaffold
 
+  generated-build:
+    uses: ./.github/workflows/generated-build.yml
+
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-test-smoke
+    needs: [build-test-smoke, generated-build]
     runs-on: ubuntu-24.04
 
     permissions:

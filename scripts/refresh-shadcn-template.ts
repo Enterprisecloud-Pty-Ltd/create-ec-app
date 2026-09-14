@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import fs from "fs-extra";
 import { localizeShadcnPortals } from "../src/portalContainers.ts";
 
-const SHADCN_CLI_VERSION = "4.12.0";
+const SHADCN_CLI_VERSION = "4.21.0";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,20 +13,13 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const TEMPLATE_DIR = path.join(REPO_ROOT, "templates", "ui", "shadcn-ui");
 const BASE_TEMPLATE_DIR = path.join(REPO_ROOT, "templates", "base");
 const KEEP_TEMP = process.argv.includes("--keep-temp");
-const SHADCN_UTILS_TEMPLATE = `import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-\treturn twMerge(clsx(inputs));
-}
-`;
+const SHADCN_UTILS_TEMPLATE = `export { cn } from "cn";\n`;
 const FALLBACK_DEPENDENCY_VERSIONS: Record<string, string> = {
 	"class-variance-authority": "0.7.1",
-	clsx: "2.1.1",
-	"lucide-react": "1.21.0",
-	"radix-ui": "1.6.0",
+	cn: "0.2.5",
+	"lucide-react": "1.41.0",
+	"radix-ui": "1.6.7",
 	shadcn: SHADCN_CLI_VERSION,
-	"tailwind-merge": "3.6.0",
 };
 const FALLBACK_DEV_DEPENDENCY_VERSIONS: Record<string, string> = {
 	"tw-animate-css": "1.4.0",
@@ -149,7 +142,7 @@ async function updatePackagePatch(tempProjectDir: string): Promise<void> {
 		const baseDependencies = basePackage[section] ?? {};
 		const diff: Record<string, string> = {};
 
-		for (const [name, range] of Object.entries(generatedDependencies).sort()) {
+		for (const [name, range] of Object.entries(generatedDependencies).sort(([a], [b]) => a.localeCompare(b))) {
 			if (baseDependencies[name] === range) {
 				continue;
 			}

@@ -8,7 +8,7 @@ import {
 import { localizeShadcnPortals } from "./portalContainers.js";
 
 const SHADCN_SETUP_DEPENDENCIES: Readonly<Record<string, string>> = {
-	shadcn: "4.12.0",
+	shadcn: "4.21.0",
 };
 
 const TARGET_PREFIXES: ReadonlyArray<[string, string]> = [
