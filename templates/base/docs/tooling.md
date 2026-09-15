@@ -21,7 +21,9 @@ The template baseline uses TypeScript 7.0.2, Oxlint 1.81.0, and the matching `ox
 
 `@typescript/native` aliases `typescript@7.0.2` and supplies the `tsc` command. `typescript` aliases Microsoft's `@typescript/typescript6@6.0.3` compatibility package for the JavaScript API used by Query's lint dependencies; its compiler command is `tsc6`. Keep the aliases until those dependencies support the native API. Verify with `npx tsc --version` and `npm ls typescript @typescript/native`.
 
-Oxlint retains React Hooks, Fast Refresh, React Compiler, and recommended TanStack Query rules, plus type-aware floating/misused promise checks. React Compiler and Query rules use the official plugins through Oxlint's JavaScript plugin bridge. Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded from lint but are typechecked and bundled.
+Oxlint retains React Hooks, Fast Refresh, React Compiler, and recommended TanStack Query rules, plus type-aware floating/misused promise checks. React Compiler, Query, and `@shadcn/lint` rules use the official plugins through Oxlint's JavaScript plugin bridge.
+
+The design-system baseline rejects restyling imported UI components beyond layout, raw Tailwind palette colours, arbitrary Tailwind values, and dynamically constructed class names. Unknown Tailwind classes produce warnings while a project establishes any external stylesheet exceptions. Use component variants and theme tokens. Add a component variant in `src/components/ui` when the design needs an appearance that the component does not expose. Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded from lint but are typechecked and bundled.
 
 ## Editor
 

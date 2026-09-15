@@ -34,16 +34,18 @@ This follows [Microsoft's side-by-side installation guidance](https://devblogs.m
 
 ## Rules retained during the migration
 
-`.oxlintrc.json` retains the previous recommended JavaScript/TypeScript checks, React Hooks and Fast Refresh checks, React Compiler checks, and all recommended TanStack Query rules. It adds type-aware checks for floating promises and misused promises.
+`.oxlintrc.json` retains the previous recommended JavaScript/TypeScript checks, React Hooks and Fast Refresh checks, React Compiler checks, and all recommended TanStack Query rules. It adds type-aware checks for floating promises and misused promises. It also loads [`@shadcn/lint`](https://github.com/shadcn-ui/lint) and enforces `no-restyle` with layout classes allowed, `no-raw-colors`, `no-arbitrary-values`, and `require-static-classes`. `no-unknown-classes` starts as a warning so teams can identify external stylesheet exceptions before making it an error.
 
-React Compiler and Query rules run from their official ESLint plugin packages through [Oxlint's JavaScript plugin support](https://oxc.rs/docs/guide/usage/linter/js-plugins.html). That bridge is still alpha. The generator's CI tests deliberately broken and corrected code to catch integration regressions; ESLint may still appear as a transitive plugin dependency, but it is not the app's lint runner.
+React Compiler, Query, and shadcn rules run from their official ESLint plugin packages through [Oxlint's JavaScript plugin support](https://oxc.rs/docs/guide/usage/linter/js-plugins.html). That bridge is still alpha. The generator's CI tests deliberately broken and corrected code to catch integration regressions; ESLint may still appear as a transitive plugin dependency, but it is not the app's lint runner.
+
+The first shadcn policy is deliberately narrow. Layout utilities remain valid on imported components, while component appearance belongs in variants or the component source. Raw palette colours and arbitrary values must become theme tokens, and class names must remain statically readable by Tailwind and the linter. `no-inline-styles` is not enabled because runtime CSS variables and calculated values remain valid application needs.
 
 Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded from lint, matching the previous policy. They are still typechecked and bundled. The generated `pcf/` directory has its own tooling.
 
 ## Maintaining the setup
 
 1. Update TypeScript 7 and `oxlint-tsgolint` together; verify the engine's supported TypeScript version in the [Oxlint release notes](https://oxc.rs/blog/2026-07-22-type-aware-linting-stable). Preserve both npm aliases until the Query dependency chain supports the native compiler API.
-2. Review React Hooks and Query plugin releases when updating Oxlint. Retest both invalid and corrected examples using the generator's `scripts/check-generated-lint.mjs <app-directory>`.
+2. Review React Hooks, Query, and `@shadcn/lint` releases when updating Oxlint. Retest both invalid and corrected examples using the generator's `scripts/check-generated-lint.mjs <app-directory>`.
 3. Run checks and a production build after dependency changes. In `create-ec-app`, run `npm run check`, `npm run smoke:scaffold`, and `npm run build:generated`; the last command checks all eight target/UI combinations and both PCF wrappers.
 4. Refresh shadcn source and its dependency patch together using the generator's pinned `npm run refresh:shadcn-template`. Updating package versions alone does not refresh vendored components.
 

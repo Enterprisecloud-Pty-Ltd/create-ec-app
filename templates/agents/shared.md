@@ -6,6 +6,8 @@ Stay consistent with the project's existing UI system.
 - Kendo: use Kendo React for rich controls and Tailwind for layout.
 - Preserve the existing theme and global CSS imports.
 - Do not mix UI systems unless explicitly asked.
+- Keep imported UI components on their existing variants. Use `className` for layout only. Add a component variant or edit the owned component source when the design requires a new appearance.
+- Use theme colour and spacing tokens. Keep Tailwind class names static so lint and Tailwind can resolve them.
 
 When implementing or reviewing a Figma design, treat Figma as the visual source of truth.
 
@@ -60,3 +62,7 @@ Keep dated entries for material changes to this app's tooling or agent instructi
 - Adopted TypeScript 7 and Oxlint while retaining React Hooks, Fast Refresh, React Compiler, and TanStack Query lint protection.
 - Added editor settings and `docs/tooling.md`; PCF wrappers retain their separate TypeScript 5.9 toolchain.
 - The generator's Node 26 validation passed all eight target/UI builds and lint checks, both PCF wrappers, and lint regression fixtures. This does not verify this application's future changes or live deployment.
+
+### 2026-09-15 — Design-system lint baseline
+
+- Added `@shadcn/lint` rules that keep component appearance in variants or owned component source, require theme-backed colour and spacing values, and require statically readable Tailwind classes.

@@ -227,7 +227,7 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests eight deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
 
 Run `npm run check` for the CLI's typecheck, Oxlint, and unit tests. VS Code recommendations and settings are supplied for the CLI and generated apps.
 

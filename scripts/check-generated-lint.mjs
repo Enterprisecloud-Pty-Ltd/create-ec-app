@@ -11,13 +11,18 @@ const linter = path.join(projectDir, "node_modules", "oxlint", "bin", "oxlint");
 const broken = `
 import { useEffect, useState } from 'react';
 import { QueryClient, useQuery } from '@tanstack/react-query';
-export function Broken({ enabled, id }: { enabled: boolean; id: string }) {
+import { Button } from '@/components/ui/button';
+export function Broken({ enabled, id, tone }: { enabled: boolean; id: string; tone: string }) {
   if (enabled) useState(0);
   useEffect(() => { console.log(id); }, []);
   const client = new QueryClient();
   useQuery({ queryKey: ['record'], queryFn: () => Promise.resolve(id) });
   fetch('/_api/accounts');
-  return <button onClick={async () => { await fetch('/_api/accounts'); }}>{client.isFetching()}</button>;
+  return <>
+    <Button className="p-4">{client.isFetching()}</Button>
+    <div className="bg-red-500 p-[13px] flex-cols">Raw design values</div>
+    <Button className={\`bg-\${tone}-500\`} onClick={async () => { await fetch('/_api/accounts'); }}>Save</Button>
+  </>;
 }
 export function Mutating({ value }: { value: { count: number } }) {
   value.count += 1;
@@ -32,13 +37,18 @@ export function Corrected({ id }: { id: string }) {
   useEffect(() => { console.log(id); }, [id]);
   const [client] = useState(() => new QueryClient());
   useQuery({ queryKey: ['record', id], queryFn: () => Promise.resolve(id) });
-  return <button onClick={() => { void fetch('/_api/accounts'); }}>{client.isFetching()}</button>;
+  return <Button className="mt-4 w-full" onClick={() => { void fetch('/_api/accounts'); }}>{client.isFetching()}</Button>;
 }
 export function Reading({ value }: { value: { count: number } }) {
   return <div>{value.count}</div>;
 }
 `;
 const expected = new Map([
+	["shadcn(no-restyle)", "error"],
+	["shadcn(no-raw-colors)", "error"],
+	["shadcn(no-arbitrary-values)", "error"],
+	["shadcn(require-static-classes)", "error"],
+	["shadcn(no-unknown-classes)", "warning"],
   ["react(only-export-components)", "error"],
   ["react-hooks(rules-of-hooks)", "error"],
   ["react-hooks(exhaustive-deps)", "warning"],
@@ -50,7 +60,7 @@ const expected = new Map([
 ]);
 
 function lint() {
-  const result = spawnSync(process.execPath, [linter, "--format", "json", fixture], {
+  const result = spawnSync(process.execPath, [linter, "--format", "json", path.relative(projectDir, fixture)], {
     cwd: projectDir,
     encoding: "utf8",
   });
@@ -72,7 +82,7 @@ try {
   const passing = lint();
   assert.equal(passing.status, 0, JSON.stringify(passing.diagnostics));
   assert.deepEqual(passing.diagnostics, [], "Corrected example must have no diagnostics");
-  console.log("Generated lint checks passed: eight regressions rejected, corrected example accepted.");
+  console.log("Generated lint checks passed: thirteen regressions rejected, corrected example accepted.");
 } finally {
   fs.unlinkSync(fixture);
 }

@@ -29,3 +29,10 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 
 - Scaffold now composes generated `AGENTS.md` from `templates/agents/shared.md` and `templates/agents/hosts/{target}.md` instead of copying `templates/targets/*/AGENTS.md`.
 - Shared generated guidance includes Figma as the visual source of truth, host-chrome boundaries per target, and the TypeScript 7 / Oxlint tooling changelog inherited from the 2026-09-05 template baseline.
+
+### 2026-09-15 — Design-system lint baseline
+
+- Added [`@shadcn/lint`](https://github.com/shadcn-ui/lint) 0.1.0 to generated apps through the existing Oxlint JavaScript-plugin bridge and aligned `cn` from 0.2.5 to its required 0.2.6 grammar patch.
+- Enabled `no-restyle` with layout classes allowed, `no-raw-colors`, `no-arbitrary-values`, and `require-static-classes`. Enabled `no-unknown-classes` as a warning so projects can establish external stylesheet exceptions before promoting it to an error. Left `no-inline-styles` disabled to preserve legitimate runtime styles.
+- Extended the generated lint fixture to prove the policies reject broken UI code and accept variant, layout, and theme-token usage.
+- Node 26.8.1 validation passed 97 unit tests with 100% coverage, scaffold and package-content checks, all eight generated app builds and lint runs, both PCF builds, CSS scoping, and the 13-failure/corrected lint fixture. Local dependency lifecycle scripts remained disabled, so Kendo license activation was not verified.

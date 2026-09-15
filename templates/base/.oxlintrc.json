@@ -19,6 +19,18 @@
 				"**/*.{ts,tsx}"
 			],
 			"rules": {
+				"shadcn/no-restyle": [
+					"error",
+					{
+						"allow": [
+							"layout"
+						]
+					}
+				],
+				"shadcn/no-raw-colors": "error",
+				"shadcn/no-arbitrary-values": "error",
+				"shadcn/require-static-classes": "error",
+				"shadcn/no-unknown-classes": "warn",
 				"constructor-super": "error",
 				"for-direction": "error",
 				"getter-return": "error",
@@ -145,6 +157,7 @@
 		"typeAware": true
 	},
 	"jsPlugins": [
+		"@shadcn/lint",
 		{
 			"name": "react-hooks-js",
 			"specifier": "eslint-plugin-react-hooks"
