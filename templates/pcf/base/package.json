@@ -4,9 +4,9 @@
   "private": true,
   "description": "{{CONTROL_DESCRIPTION}}",
   "scripts": {
-    "build": "pcf-scripts build",
+    "build": "node scripts/run-pcf.mjs build",
     "clean": "pcf-scripts clean",
-    "lint": "pcf-scripts lint",
+    "lint": "node scripts/run-pcf.mjs lint",
     "rebuild": "npm run clean && npm run build",
     "start": "pcf-scripts start",
     "push": "pcf-scripts push"

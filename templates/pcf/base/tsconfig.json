@@ -7,11 +7,12 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["react", "react-dom", "powerapps-component-framework"],
+    "types": ["react", "react-dom", "powerapps-component-framework", "xrm"],
     "typeRoots": ["./node_modules/@types", "{{PROJECT_NODE_MODULES_TYPES_ROOT}}"],
     "baseUrl": "{{PROJECT_ROOT_REL}}",
     "paths": {
       "@/*": ["src/*"],
+	  "@progress/kendo-react-popup": ["node_modules/@progress/kendo-react-popup"],
       "@tanstack/react-query": ["node_modules/@tanstack/react-query"],
       "react": ["node_modules/@types/react"],
       "react/jsx-runtime": ["node_modules/@types/react/jsx-runtime"],

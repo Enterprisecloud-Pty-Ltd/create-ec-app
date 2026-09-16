@@ -309,6 +309,17 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	}
 }
 
+function exitIfCancelled<T>(
+	promptValue: T,
+): asserts promptValue is Exclude<T, symbol> {
+	if (!isCancel(promptValue)) {
+		return;
+	}
+
+	cancel("Operation cancelled.");
+	process.exit(0);
+}
+
 export function runCliEntrypoint(
 	isEntryPoint = isMainModule(),
 	runMain: () => Promise<void> = main,
@@ -332,10 +343,7 @@ async function promptProjectName(): Promise<string> {
 		validate: validateProjectName,
 	});
 
-	if (isCancel(name)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(name);
 
 	return String(name).trim();
 }
@@ -352,10 +360,7 @@ async function promptTarget(): Promise<AppTarget> {
 		],
 	});
 
-	if (isCancel(target)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(target);
 
 	return target;
 }
@@ -380,10 +385,7 @@ async function promptUiOptions(
 		],
 	});
 
-	if (isCancel(selection)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(selection);
 
 	if (selection === "shadcn-registry") {
 		return {
@@ -403,10 +405,7 @@ async function promptShadcnRegistryUrl(): Promise<string> {
 		validate: validateShadcnRegistryUrl,
 	});
 
-	if (isCancel(registryUrl)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(registryUrl);
 
 	return String(registryUrl).trim();
 }
@@ -420,10 +419,7 @@ async function promptInstallDependencies(): Promise<boolean> {
 		],
 	});
 
-	if (isCancel(shouldRunNpmInstall)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(shouldRunNpmInstall);
 
 	return shouldRunNpmInstall.run;
 }
@@ -780,9 +776,8 @@ jspm_packages/
 .nuxt
 dist
 
-# Gatsby files
+# Cache
 .cache/
-public
 
 # Storybook build outputs
 .out

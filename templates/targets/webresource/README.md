@@ -302,6 +302,7 @@ This writes a standalone PCF project to the `--pcf-dir` folder. The generated co
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - scopes every non-keyframe CSS selector under the generated PCF host selector
+- keeps shadcn portals and Kendo popups inside the control's scoped portal root
 - creates `src/runtime/types.ts` only if that file does not already exist
 - provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
 - mounts your React app directly into the PCF container

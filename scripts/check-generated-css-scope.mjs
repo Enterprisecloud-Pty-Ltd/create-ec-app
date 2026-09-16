@@ -34,6 +34,10 @@ root.walkRules((rule) => {
 	}
 });
 
+root.walkAtRules("layer", (atRule) => {
+	failures.push(`cascade layer remains in PCF CSS: @${atRule.name} ${atRule.params}`.trim());
+});
+
 if (!css.includes("[data-pcf-control=")) {
 	failures.push("missing PCF control data attribute scope");
 }

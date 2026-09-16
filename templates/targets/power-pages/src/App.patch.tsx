@@ -1,17 +1,13 @@
-import { useAuth } from "./context/useAuth";
-import { AuthError } from "./components/shared/AuthError";
+import { getPowerPagesUser } from "./powerPages";
 
 function App() {
-	const { isAuthenticated } = useAuth();
+	const user = getPowerPagesUser();
+	const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
 
 	return (
 		<div className="flex h-screen flex-col items-center justify-center gap-4">
-			<AuthError />
-			{isAuthenticated ? (
-				<div>You are logged in</div>
-			) : (
-				<div>Please Log In</div>
-			)}
+			<p>Power Pages SPA ready.</p>
+			{user && <p>Signed in as {displayName || user.userName}.</p>}
 		</div>
 	);
 }

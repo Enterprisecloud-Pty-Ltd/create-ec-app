@@ -37,6 +37,7 @@ interface PackageLock {
 }
 
 async function main() {
+	const themeBaseline = await readThemeBaseline();
 	const tempRoot = await fs.mkdtemp(
 		path.join(os.tmpdir(), "create-ec-app-shadcn-"),
 	);
@@ -55,6 +56,11 @@ async function main() {
 			SHADCN_UTILS_TEMPLATE,
 			"utf8",
 		);
+		await fs.writeFile(
+			path.join(tempProjectDir, "src", "index.css"),
+			themeBaseline,
+			"utf8",
+		);
 
 		const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
 		execFileSync(
@@ -69,7 +75,10 @@ async function main() {
 			{ cwd: tempProjectDir, stdio: "inherit" },
 		);
 
-		await ensureShadcnTailwindImport(tempProjectDir);
+		assertThemeTokens(
+			await fs.readFile(path.join(tempProjectDir, "src", "index.css"), "utf8"),
+			"refreshed shadcn stylesheet",
+		);
 		await localizeShadcnPortals(tempProjectDir);
 		await copyGeneratedTemplateFiles(tempProjectDir);
 		await updatePackagePatch(tempProjectDir);
@@ -85,23 +94,28 @@ async function main() {
 	}
 }
 
-async function ensureShadcnTailwindImport(projectDir: string): Promise<void> {
-	const cssPath = path.join(projectDir, "src", "index.css");
+async function readThemeBaseline(): Promise<string> {
+	const cssPath = path.join(TEMPLATE_DIR, "src", "index.patch.css");
 	const source = await fs.readFile(cssPath, "utf8");
+	assertThemeTokens(source, "committed shadcn theme baseline");
+	return source;
+}
 
-	if (source.includes('shadcn/tailwind.css')) {
-		return;
+function assertThemeTokens(source: string, label: string): void {
+	for (const required of [
+		'@import "tailwindcss";',
+		'@import "shadcn/tailwind.css";',
+		"@theme inline",
+		"--color-background: var(--background);",
+		"--color-popover: var(--popover);",
+		"--background:",
+		"--popover:",
+		".dark",
+	]) {
+		if (!source.includes(required)) {
+			throw new Error(`${label} is missing ${required}`);
+		}
 	}
-
-	const importLine = '@import "shadcn/tailwind.css";';
-	const updated = source.includes('@import "tailwindcss";')
-		? source.replace(
-			'@import "tailwindcss";',
-			`@import "tailwindcss";\n${importLine}`,
-		)
-		: `${importLine}\n${source}`;
-
-	await fs.writeFile(cssPath, updated, "utf8");
 }
 
 async function copyGeneratedTemplateFiles(tempProjectDir: string): Promise<void> {

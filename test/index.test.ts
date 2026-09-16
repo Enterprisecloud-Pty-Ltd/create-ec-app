@@ -443,7 +443,7 @@ describe("scaffoldProject", () => {
 		expect(agents).not.toContain("<!-- figma-host -->");
 	});
 
-	it("applies the Power Pages Kendo main template", async () => {
+	it("composes Power Pages hosted-session support with Kendo", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
 
@@ -460,14 +460,40 @@ describe("scaffoldProject", () => {
 			path.join(rootDir, "power-pages-kendo", "src", "main.tsx"),
 			"utf8",
 		);
-		expect(mainTsx).toContain("<AuthProvider>");
 		expect(mainTsx).toContain("@progress/kendo-theme-fluent/dist/all.css");
+		expect(mainTsx).toContain("<QueryClientProvider");
+		expect(mainTsx).not.toContain("AuthProvider");
+
+		const powerPages = await fs.readFile(
+			path.join(rootDir, "power-pages-kendo", "src", "powerPages.ts"),
+			"utf8",
+		);
+		expect(powerPages).toContain("window.Microsoft?.Dynamic365?.Portal?.User");
+		expect(powerPages).toContain('fetch("/_layout/tokenhtml"');
+
+		const config = await fs.readJson(
+			path.join(rootDir, "power-pages-kendo", "powerpages.config.json"),
+		);
+		expect(config).toMatchObject({
+			$schema: "https://www.schemastore.org/powerpages.config.json",
+			siteName: "power-pages-kendo",
+			compiledPath: "dist",
+			defaultLandingPage: "index.html",
+			bundleFilePatterns: ["index-*.js", "index-*.css"],
+		});
+		const packageJson = await fs.readJson(
+			path.join(rootDir, "power-pages-kendo", "package.json"),
+		);
+		expect(packageJson.allowScripts).toEqual({
+			"@progress/kendo-licensing@1.11.3": true,
+		});
 
 		const agents = await fs.readFile(
 			path.join(rootDir, "power-pages-kendo", "AGENTS.md"),
 			"utf8",
 		);
-		expect(agents).toContain("src/context/AuthContext.tsx");
+		expect(agents).toContain("src/powerPages.ts");
+		expect(agents).toContain("window.Microsoft.Dynamic365.Portal.User");
 		expect(agents).toContain("root-relative `/_api/...` URLs");
 		expect(agents).toContain("split Power Pages site header");
 		expect(agents).toContain("local `/_api` proxy smoke test");
@@ -513,7 +539,7 @@ describe("scaffoldProject", () => {
 			true,
 		);
 		await expect(
-			fs.pathExists(path.join(projectDir, "staticwebapp.config.json")),
+			fs.pathExists(path.join(projectDir, "public", "staticwebapp.config.json")),
 		).resolves.toBe(false);
 		await expect(fs.pathExists(path.join(projectDir, "components.json"))).resolves.toBe(
 			false,
@@ -544,6 +570,14 @@ describe("scaffoldProject", () => {
 		const agents = await fs.readFile(path.join(rootDir, "git-demo", "AGENTS.md"), "utf8");
 		expect(agents).toContain("There is no host chrome. The Figma frame is the app.");
 		expect(agents).toContain("SWA CLI smoke test");
+
+		const packageJson = await fs.readJson(
+			path.join(rootDir, "git-demo", "package.json"),
+		);
+		expect(packageJson.allowScripts).toEqual({
+			"@progress/kendo-licensing@1.11.3": true,
+			"keytar@7.9.0": true,
+		});
 	});
 
 	it("reports git initialization failures with the skip-git escape hatch", async () => {
@@ -685,7 +719,9 @@ describe("main", () => {
 		await main();
 
 		await expect(
-			fs.pathExists(path.join(rootDir, "main-demo", "staticwebapp.config.json")),
+			fs.pathExists(
+				path.join(rootDir, "main-demo", "public", "staticwebapp.config.json"),
+			),
 		).resolves.toBe(true);
 		await expect(
 			fs.pathExists(path.join(rootDir, "main-demo", ".git")),

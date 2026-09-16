@@ -205,7 +205,9 @@ npm install
 npm run build
 ```
 
-Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes. Removal is only automatic when the folder still looks like a generated control; if the output directory contains unrelated content, pass `--force` to overwrite it.
+Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes. New wrappers contain `create-ec-app.pcf.json`, which proves generator ownership and permits automatic regeneration. Wrappers created before this marker was introduced require `--force` once; review the target first, because an unmarked PCF project may contain hand-maintained work. Later regenerations recognize the marker automatically.
+
+The output cannot be the source project or a directory containing it, including paths through symlinks or junctions. Constructor names use letters and digits and must start with a letter. Namespace segments follow the same rule and may be separated by dots, such as `EC.Controls`. When `--constructor` is omitted, numeric project names receive an `App` prefix: `360-dashboard` becomes `App360DashboardHost`. Versions use numeric `major.minor.patch` values without leading zeros, prerelease labels, or build metadata so they work in both npm and the PCF manifest.
 
 What gets generated:
 
@@ -232,7 +234,7 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, packs the npm tarball, installs it, and scaffolds the target/UI matrix through the installed package with `--no-install --skip-git`, checking the generated file shape including `.gitignore` contents — so publish-time file stripping is caught locally. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, packs the npm tarball, installs it, and scaffolds the target/UI matrix through the installed package with `--no-install --skip-git`, checking the generated file shape including `.gitignore` contents — so publish-time file stripping is caught locally. `npm run build:generated` installs the packed CLI, scaffolds fresh apps, verifies `npm ci` from their new lockfiles, builds, and lints with zero warnings across all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds and lints both PCF wrappers outside their source projects, rebuilds the converted source apps, checks agent guidance and CSS isolation, verifies the deployed SWA configuration and TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus a compiled, lint-clean counterpart. Both CI jobs must pass before automatic release.
 
 Run `npm run check` for the CLI's typecheck, Oxlint, and unit tests. VS Code recommendations and settings are supplied for the CLI and generated apps.
 

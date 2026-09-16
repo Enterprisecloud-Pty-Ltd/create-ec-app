@@ -25,15 +25,16 @@ Treat it as a Power Pages code site. Keep it small, readable, and easy to upload
 ### Local dev
 
 - Use Vite for local UI development.
-- Use the existing Vite `/_api` proxy when local code needs to call a Power Pages site. Keep the proxy target explicit and environment-specific.
-- Use the existing `AuthContext` flow only where this template already requires it.
+- Set `VITE_POWER_PAGES_URL` only when local code needs the Vite `/_api` proxy. Keep the target explicit, development-only, and environment-specific.
+- The deployed site uses the Power Pages session. Read hosted user details from `window.Microsoft.Dynamic365.Portal.User` through `src/powerPages.ts`.
+- Local authenticated API work requires the documented development-only Entra v1 bearer flow. Keep environment-specific ADAL configuration out of the deployed starter unless that local integration is requested.
 - Never commit client secrets, tenant-specific secrets, or real token values.
-- Do not mix Power Pages auth with webresource `AuthService.ts` or `token.json`.
+- Do not mix Power Pages auth with webresource `AuthService.ts`, `token.json`, or a second production authentication client.
 
 | File | Rule |
 |---|---|
-| `src/context/AuthContext.tsx` | Current auth boundary. Reuse it; do not add a second auth system. |
-| `src/main.tsx` | Preserve `AuthProvider`, `QueryClientProvider`, bootstrap, and global style imports. |
+| `src/powerPages.ts` | Typed boundary for hosted user context and the request verification token. |
+| `src/main.tsx` | Preserve `QueryClientProvider`, bootstrap, and global style imports. |
 | `vite.config.ts` | Preserve React, Tailwind, alias, and the `/_api` dev proxy when API calls are used locally. |
 | `powerpages.config.json` | Keep compiled path and landing page accurate. |
 | `src/App.tsx` | Keep app behaviour client-side and provider-aware. |
@@ -47,8 +48,8 @@ Do not replace Vite, add SSR, add Next.js, change the code-site output shape, or
 Prefer direct Power Pages Web API calls.
 
 - Use root-relative `/_api/...` URLs.
-- Use the existing auth context only where the current template flow already uses it.
-- Handle Power Pages request verification/CSRF where the portal Web API requires it.
+- Use the hosted Power Pages session in deployed code. Do not attach an Entra bearer token there.
+- Include the Power Pages request verification token on every hosted portal Web API request.
 - Put `fetch` in service files, not UI components.
 - Use narrow `$select` queries and `URLSearchParams` for normal query parameters.
 - Use small TypeScript interfaces for response shapes. Check `response.ok` with useful status text.

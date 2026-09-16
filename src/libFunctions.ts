@@ -107,6 +107,7 @@ export function mergeJson(base: JsonObject, patch: JsonObject): JsonObject {
 	const result: JsonObject = { ...base, ...patch };
 
 	const mergeKeys = [
+		"allowScripts",
 		"dependencies",
 		"devDependencies",
 		"peerDependencies",

@@ -105,11 +105,13 @@ describe("applyLayer", () => {
 		const layerDir = path.join(rootDir, "layer");
 
 		await fs.outputJson(path.join(projectDir, "package.json"), {
+			allowScripts: { "base-install@1.0.0": true },
 			dependencies: { react: "19.0.0" },
 			scripts: { build: "vite build" },
 			nested: { replaced: false, removed: true },
 		});
 		await fs.outputJson(path.join(layerDir, "package.patch.json"), {
+			allowScripts: { "layer-install@2.0.0": true },
 			dependencies: { react: "19.2.7" },
 			scripts: { test: "vitest run" },
 			nested: { replaced: true },
@@ -121,6 +123,10 @@ describe("applyLayer", () => {
 		await applyLayer(layerDir, projectDir);
 
 		await expect(fs.readJson(path.join(projectDir, "package.json"))).resolves.toEqual({
+			allowScripts: {
+				"base-install@1.0.0": true,
+				"layer-install@2.0.0": true,
+			},
 			dependencies: { react: "19.2.7" },
 			scripts: { build: "vite build", test: "vitest run" },
 			nested: { replaced: true },

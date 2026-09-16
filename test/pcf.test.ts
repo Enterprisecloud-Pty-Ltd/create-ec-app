@@ -16,8 +16,8 @@ async function makeTempDir(): Promise<string> {
 	return dir;
 }
 
-async function makeBuiltWebresource(): Promise<string> {
-	const projectDir = await makeTempDir();
+async function makeBuiltWebresource(directory?: string): Promise<string> {
+	const projectDir = directory ?? (await makeTempDir());
 	await fs.outputJson(path.join(projectDir, "package.json"), {
 		name: "fusion-notebook",
 	});
@@ -78,6 +78,20 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(
 			fs.pathExists(path.join(outputDir, "ControlHost.pcfproj")),
 		).resolves.toBe(false);
+		await expect(
+			fs.readJson(path.join(outputDir, "create-ec-app.pcf.json")),
+		).resolves.toEqual({
+			generatedBy: "create-ec-app",
+			kind: "pcf-wrapper",
+		});
+		await expect(
+			fs.readFile(path.join(outputDir, "AGENTS.md"), "utf8"),
+		).resolves.toContain(
+			'.pcf-shell-control[data-pcf-control="DemoHost"]',
+		);
+		await expect(
+			fs.readFile(path.join(outputDir, "CLAUDE.md"), "utf8"),
+		).resolves.toBe("@AGENTS.md\n");
 
 		const manifest = await fs.readFile(
 			path.join(outputDir, "control", "ControlManifest.Input.xml"),
@@ -87,6 +101,13 @@ describe("generatePcfFromExistingWebresource", () => {
 		expect(manifest).toContain('constructor="DemoHost"');
 		expect(manifest).toContain('version="2.3.4"');
 		expect(manifest).not.toContain("{{PCF_");
+		const controlSource = await fs.readFile(
+			path.join(outputDir, "index.ts"),
+			"utf8",
+		);
+		expect(controlSource).toContain("public getOutputs(): IOutputs");
+		expect(controlSource).toContain("return {};");
+		expect(controlSource).not.toContain("hostField: this.runtime.recordId");
 
 		const pcfProject = await fs.readFile(
 			path.join(outputDir, "DemoHost.pcfproj"),
@@ -94,6 +115,12 @@ describe("generatePcfFromExistingWebresource", () => {
 		);
 		expect(pcfProject).toContain("<RootNamespace>ACME.DemoHost</RootNamespace>");
 		expect(pcfProject).toContain("<Name>DemoHost</Name>");
+		await expect(
+			fs.readFile(path.join(outputDir, "runtime", "pcfAuthService.ts"), "utf8"),
+		).resolves.toContain("Webresource authentication is unavailable in the PCF host");
+		await expect(
+			fs.readFile(path.join(outputDir, "webpack.config.js"), "utf8"),
+		).resolves.toContain("runtime/pcfAuthService.ts");
 
 		const strings = await fs.readFile(
 			path.join(outputDir, "strings", "control.1033.resx"),
@@ -109,6 +136,9 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(
 			fs.pathExists(path.join(projectDir, "src", "runtime", "types.ts")),
 		).resolves.toBe(true);
+		await expect(
+			fs.readFile(path.join(projectDir, "src", "runtime", "types.ts"), "utf8"),
+		).resolves.toContain("entityType: string");
 		await expect(
 			fs.pathExists(path.join(projectDir, "src", "runtime", "PortalContainer.ts")),
 		).resolves.toBe(true);
@@ -143,6 +173,79 @@ describe("generatePcfFromExistingWebresource", () => {
 		expect(result.namespace).toBe("EC");
 		await expect(
 			fs.pathExists(path.join(projectDir, "pcf", "FusionNotebookHost")),
+		).resolves.toBe(true);
+	});
+
+	it("keeps Kendo popups inside the scoped PCF portal root", async () => {
+		const projectDir = await makeBuiltWebresource();
+		await fs.writeJson(path.join(projectDir, "package.json"), {
+			name: "kendo-app",
+			dependencies: {
+				"@progress/kendo-react-popup": "^15.1.0",
+			},
+		});
+
+		const result = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+		});
+		const shell = await fs.readFile(
+			path.join(result.outputDir, "runtime", "PcfAppShell.tsx"),
+			"utf8",
+		);
+
+		expect(shell).toContain(
+			'import { PopupPropsContext } from "@progress/kendo-react-popup";',
+		);
+		expect(shell).toContain("<PopupPropsContext.Provider");
+		expect(shell).toContain("appendTo: portalContainer");
+		const webpackConfig = await fs.readFile(
+			path.join(result.outputDir, "webpack.config.js"),
+			"utf8",
+		);
+		expect(webpackConfig).toContain('"@progress/kendo-react-popup"');
+		expect(webpackConfig).toContain(
+			'"../node_modules/@progress/kendo-react-popup"',
+		);
+		const tsconfig = await fs.readFile(
+			path.join(result.outputDir, "tsconfig.json"),
+			"utf8",
+		);
+		expect(tsconfig).toContain('"@progress/kendo-react-popup"');
+	});
+
+	it("omits Kendo popup integration when the source app does not use it", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const result = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+		});
+		const shell = await fs.readFile(
+			path.join(result.outputDir, "runtime", "PcfAppShell.tsx"),
+			"utf8",
+		);
+
+		expect(shell).not.toContain("PopupPropsContext");
+		expect(shell).not.toContain("{{PCF_KENDO");
+	});
+
+	it("derives a valid constructor from a package name starting with digits", async () => {
+		const projectDir = await makeBuiltWebresource();
+		await fs.writeJson(path.join(projectDir, "package.json"), { name: "360-dashboard" });
+
+		const result = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			namespace: "EC.Controls2",
+			version: "0.0.1",
+		});
+
+		expect(result.constructorName).toBe("App360DashboardHost");
+		const manifest = await fs.readFile(
+			path.join(result.outputDir, "control", "ControlManifest.Input.xml"), "utf8",
+		);
+		expect(manifest).toContain('constructor="App360DashboardHost"');
+		expect(manifest).toContain('namespace="EC.Controls2"');
+		expect(manifest).toContain('version="0.0.1"');
+		await expect(
+			fs.pathExists(path.join(result.outputDir, "App360DashboardHost.pcfproj")),
 		).resolves.toBe(true);
 	});
 
@@ -194,6 +297,133 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(
 			fs.readFile(path.join(outputDir, "keep.txt"), "utf8"),
 		).resolves.toBe("do not overwrite");
+	});
+
+	it("does not treat a standard PCF manifest as generator ownership", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const outputDir = path.join(projectDir, "pcf", "HandMaintained");
+		await fs.outputFile(
+			path.join(outputDir, "control", "ControlManifest.Input.xml"),
+			"<manifest />",
+		);
+		await fs.outputFile(path.join(outputDir, "index.ts"), "keep hand-written code");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				output: "pcf/HandMaintained",
+				controlConstructor: "HandMaintainedHost",
+			}),
+		).rejects.toThrow("Use --force to overwrite it.");
+
+		await expect(fs.readFile(path.join(outputDir, "index.ts"), "utf8")).resolves.toBe(
+			"keep hand-written code",
+		);
+	});
+
+	it("preflights missing layers before mutating source or generated output", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const first = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			controlConstructor: "LayeredHost",
+		});
+		const appPath = path.join(projectDir, "src", "App.tsx");
+		const appBefore = await fs.readFile(appPath, "utf8");
+		const outputSentinel = path.join(first.outputDir, "keep.txt");
+		await fs.writeFile(outputSentinel, "keep generated output");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "LayeredHost",
+				layers: ["missing-layer"],
+			}),
+		).rejects.toThrow("PCF layer directory is not readable");
+
+		await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
+		await expect(fs.readFile(outputSentinel, "utf8")).resolves.toBe(
+			"keep generated output",
+		);
+	});
+
+	it("rejects a layer inside the output before deleting it", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const first = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			controlConstructor: "ContainedLayerHost",
+		});
+		const containedLayer = path.join(first.outputDir, "custom-layer");
+		await fs.outputFile(path.join(containedLayer, "README.md"), "layer contents");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "ContainedLayerHost",
+				layers: [containedLayer],
+			}),
+		).rejects.toThrow("PCF layer directory cannot be the PCF output directory or inside it");
+
+		await expect(
+			fs.readFile(path.join(containedLayer, "README.md"), "utf8"),
+		).resolves.toBe("layer contents");
+	});
+
+	it("rejects a template file before mutating source or generated output", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const first = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			controlConstructor: "TemplateFileHost",
+		});
+		const templateFile = path.join(projectDir, "not-a-template.txt");
+		await fs.writeFile(templateFile, "not a directory");
+		const appPath = path.join(projectDir, "src", "App.tsx");
+		const appBefore = await fs.readFile(appPath, "utf8");
+		const outputSentinel = path.join(first.outputDir, "keep.txt");
+		await fs.writeFile(outputSentinel, "keep generated output");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "TemplateFileHost",
+				template: templateFile,
+			}),
+		).rejects.toThrow("PCF template path is not a directory");
+
+		await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
+		await expect(fs.readFile(outputSentinel, "utf8")).resolves.toBe(
+			"keep generated output",
+		);
+	});
+
+	it("rejects an unreadable layer before mutating source or generated output", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const first = await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			controlConstructor: "UnreadableLayerHost",
+		});
+		const layerDir = path.join(projectDir, "unreadable-layer");
+		await fs.ensureDir(layerDir);
+		const appPath = path.join(projectDir, "src", "App.tsx");
+		const appBefore = await fs.readFile(appPath, "utf8");
+		const outputSentinel = path.join(first.outputDir, "keep.txt");
+		await fs.writeFile(outputSentinel, "keep generated output");
+		await fs.chmod(layerDir, 0o000);
+		try {
+			await expect(
+				generatePcfFromExistingWebresource({
+					pcfDir: projectDir,
+					controlConstructor: "UnreadableLayerHost",
+					layers: [layerDir],
+				}),
+			).rejects.toThrow("PCF layer directory is not readable");
+		} finally {
+			await fs.chmod(layerDir, 0o755);
+		}
+
+		await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
+		await expect(fs.readFile(outputSentinel, "utf8")).resolves.toBe(
+			"keep generated output",
+		);
 	});
 
 	it("overwrites a foreign output directory only when forced", async () => {
@@ -263,6 +493,63 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
 			true,
 		);
+	});
+
+	it.each(["source", "output", "ancestor"])(
+		"preserves the source when a %s alias bypasses lexical output checks",
+		async (aliasKind) => {
+			const rootDir = await makeTempDir();
+			const parentDir = path.join(rootDir, "real");
+			const projectDir = await makeBuiltWebresource(path.join(parentDir, "..demo"));
+			const aliasDir = path.join(rootDir, "alias");
+			await fs.symlink(parentDir, aliasDir, "junction");
+			const aliasedProject = path.join(aliasDir, "..demo");
+			const outputDir = aliasKind === "ancestor"
+				? aliasDir
+				: aliasKind === "output" ? aliasedProject : projectDir;
+			const appBefore = await fs.readFile(path.join(projectDir, "src", "App.tsx"), "utf8");
+			const dialogBefore = await fs.readFile(
+				path.join(projectDir, "src", "components", "ui", "dialog.tsx"), "utf8",
+			);
+
+			await expect(generatePcfFromExistingWebresource({
+				pcfDir: aliasKind === "source" ? aliasedProject : projectDir,
+				output: outputDir,
+				force: true,
+			})).rejects.toThrow("cannot be the webresource project root or a directory that contains it");
+
+			await expect(fs.readFile(path.join(projectDir, "src", "App.tsx"), "utf8"))
+				.resolves.toBe(appBefore);
+			await expect(fs.readFile(path.join(projectDir, "src", "components", "ui", "dialog.tsx"), "utf8"))
+				.resolves.toBe(dialogBefore);
+			await expect(fs.pathExists(path.join(projectDir, "src", "runtime"))).resolves.toBe(false);
+		},
+	);
+
+	it.each([
+		{ options: { controlConstructor: "Demo_Host" }, field: "constructor name" },
+		{ options: { controlConstructor: "_Demo" }, field: "constructor name" },
+		{ options: { controlConstructor: "360Host" }, field: "constructor name" },
+		{ options: { namespace: "EC_Controls" }, field: "namespace" },
+		{ options: { namespace: "EC.Controls_2" }, field: "namespace" },
+		{ options: { version: "1.0.0-beta.1" }, field: "version" },
+		{ options: { version: "1.0.0+build.1" }, field: "version" },
+		{ options: { version: "01.0.0" }, field: "version" },
+	])("rejects unsupported $options before mutating source or output", async ({ options, field }) => {
+		const projectDir = await makeBuiltWebresource();
+		const outputDir = path.join(projectDir, "pcf", "Existing");
+		await fs.outputFile(path.join(outputDir, "keep.txt"), "keep existing output");
+
+		await expect(generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			output: outputDir,
+			force: true,
+			...options,
+		})).rejects.toThrow(`Invalid PCF ${field}`);
+
+		await expect(fs.readFile(path.join(outputDir, "keep.txt"), "utf8"))
+			.resolves.toBe("keep existing output");
+		await expect(fs.pathExists(path.join(projectDir, "src", "runtime"))).resolves.toBe(false);
 	});
 
 	it("rejects values that would corrupt generated XML and JSON", async () => {
