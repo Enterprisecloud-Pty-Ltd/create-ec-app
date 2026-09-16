@@ -111,3 +111,4 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Rejected PCF outputs inside the source `src` or built `dist` trees, including aliases through symlinks or junctions, even when `--force` is supplied. Layer and template paths now fail when either side contains the other, preventing recursive self-copy.
 - Added `@types/xrm` to the standalone PCF wrapper because its TypeScript configuration explicitly loads those ambient types and the source webresource is not required to provide them.
 - Made the unreadable-directory regression POSIX-specific because Windows does not implement POSIX mode-bit denial. The cross-platform missing, non-directory, containment, and source-preservation tests remain active everywhere.
+- Bounded alias resolution at the filesystem root so unavailable Windows drives and UNC shares fail clearly instead of looping indefinitely.

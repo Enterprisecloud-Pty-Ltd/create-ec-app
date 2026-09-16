@@ -2,7 +2,10 @@ import os from "node:os";
 import path from "node:path";
 import fs from "fs-extra";
 import { afterEach, describe, expect, it } from "vitest";
-import { generatePcfFromExistingWebresource } from "../src/pcf";
+import {
+	generatePcfFromExistingWebresource,
+	resolvePathAliases,
+} from "../src/pcf";
 
 const tempDirs: string[] = [];
 
@@ -49,6 +52,15 @@ export { DialogContent }
 }
 
 describe("generatePcfFromExistingWebresource", () => {
+	it("fails when an unavailable filesystem root cannot be resolved", async () => {
+		await expect(
+			resolvePathAliases(path.parse(process.cwd()).root, {
+				pathExists: async () => false,
+				realpath: async (filePath) => filePath,
+			}),
+		).rejects.toThrow("Could not resolve an existing filesystem root");
+	});
+
 	it("generates a token-replaced PCF wrapper with scoped CSS and runtime files", async () => {
 		const projectDir = await makeBuiltWebresource();
 		await fs.outputFile(

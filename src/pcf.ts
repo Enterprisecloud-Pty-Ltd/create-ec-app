@@ -371,15 +371,26 @@ function isSameOrDescendant(parentDir: string, candidateDir: string): boolean {
 	);
 }
 
-async function resolvePathAliases(targetPath: string): Promise<string> {
+interface PathAliasFileSystem {
+	pathExists(path: string): Promise<boolean>;
+	realpath(path: string): Promise<string>;
+}
+
+export async function resolvePathAliases(
+	targetPath: string,
+	fileSystem: PathAliasFileSystem = fs,
+): Promise<string> {
 	let existingPath = path.resolve(targetPath);
 	const missingSegments: string[] = [];
-	while (!(await fs.pathExists(existingPath))) {
+	while (!(await fileSystem.pathExists(existingPath))) {
 		const parent = path.dirname(existingPath);
+		if (parent === existingPath) {
+			throw new Error(`Could not resolve an existing filesystem root for ${targetPath}.`);
+		}
 		missingSegments.unshift(path.basename(existingPath));
 		existingPath = parent;
 	}
-	return path.join(await fs.realpath(existingPath), ...missingSegments);
+	return path.join(await fileSystem.realpath(existingPath), ...missingSegments);
 }
 
 async function ensureRuntimeTypes(projectDir: string): Promise<void> {
