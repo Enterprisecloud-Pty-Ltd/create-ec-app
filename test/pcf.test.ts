@@ -78,6 +78,9 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(
 			fs.pathExists(path.join(outputDir, "ControlHost.pcfproj")),
 		).resolves.toBe(false);
+		expect(
+			(await fs.readJson(path.join(outputDir, "package.json"))).devDependencies["@types/xrm"],
+		).toBe("^9.0.97");
 		await expect(
 			fs.readJson(path.join(outputDir, "create-ec-app.pcf.json")),
 		).resolves.toEqual({
@@ -361,11 +364,30 @@ describe("generatePcfFromExistingWebresource", () => {
 				controlConstructor: "ContainedLayerHost",
 				layers: [containedLayer],
 			}),
-		).rejects.toThrow("PCF layer directory cannot be the PCF output directory or inside it");
+		).rejects.toThrow("PCF layer directory cannot overlap the PCF output directory");
 
 		await expect(
 			fs.readFile(path.join(containedLayer, "README.md"), "utf8"),
 		).resolves.toBe("layer contents");
+	});
+
+	it("rejects a layer that contains the output before mutating either directory", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const appBefore = await fs.readFile(path.join(projectDir, "src", "App.tsx"), "utf8");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "AncestorLayerHost",
+				layers: ["."],
+			}),
+		).rejects.toThrow("PCF layer directory cannot overlap the PCF output directory");
+
+		await expect(fs.readFile(path.join(projectDir, "src", "App.tsx"), "utf8"))
+			.resolves.toBe(appBefore);
+		await expect(
+			fs.pathExists(path.join(projectDir, "pcf", "AncestorLayerHost")),
+		).resolves.toBe(false);
 	});
 
 	it("rejects a template file before mutating source or generated output", async () => {
@@ -395,36 +417,39 @@ describe("generatePcfFromExistingWebresource", () => {
 		);
 	});
 
-	it("rejects an unreadable layer before mutating source or generated output", async () => {
-		const projectDir = await makeBuiltWebresource();
-		const first = await generatePcfFromExistingWebresource({
-			pcfDir: projectDir,
-			controlConstructor: "UnreadableLayerHost",
-		});
-		const layerDir = path.join(projectDir, "unreadable-layer");
-		await fs.ensureDir(layerDir);
-		const appPath = path.join(projectDir, "src", "App.tsx");
-		const appBefore = await fs.readFile(appPath, "utf8");
-		const outputSentinel = path.join(first.outputDir, "keep.txt");
-		await fs.writeFile(outputSentinel, "keep generated output");
-		await fs.chmod(layerDir, 0o000);
-		try {
-			await expect(
-				generatePcfFromExistingWebresource({
-					pcfDir: projectDir,
-					controlConstructor: "UnreadableLayerHost",
-					layers: [layerDir],
-				}),
-			).rejects.toThrow("PCF layer directory is not readable");
-		} finally {
-			await fs.chmod(layerDir, 0o755);
-		}
+	it.skipIf(process.platform === "win32")(
+		"rejects an unreadable layer before mutating source or generated output",
+		async () => {
+			const projectDir = await makeBuiltWebresource();
+			const first = await generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "UnreadableLayerHost",
+			});
+			const layerDir = path.join(projectDir, "unreadable-layer");
+			await fs.ensureDir(layerDir);
+			const appPath = path.join(projectDir, "src", "App.tsx");
+			const appBefore = await fs.readFile(appPath, "utf8");
+			const outputSentinel = path.join(first.outputDir, "keep.txt");
+			await fs.writeFile(outputSentinel, "keep generated output");
+			await fs.chmod(layerDir, 0o000);
+			try {
+				await expect(
+					generatePcfFromExistingWebresource({
+						pcfDir: projectDir,
+						controlConstructor: "UnreadableLayerHost",
+						layers: [layerDir],
+					}),
+				).rejects.toThrow("PCF layer directory is not readable");
+			} finally {
+				await fs.chmod(layerDir, 0o755);
+			}
 
-		await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
-		await expect(fs.readFile(outputSentinel, "utf8")).resolves.toBe(
-			"keep generated output",
-		);
-	});
+			await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
+			await expect(fs.readFile(outputSentinel, "utf8")).resolves.toBe(
+				"keep generated output",
+			);
+		},
+	);
 
 	it("overwrites a foreign output directory only when forced", async () => {
 		const projectDir = await makeBuiltWebresource();
@@ -493,6 +518,46 @@ describe("generatePcfFromExistingWebresource", () => {
 		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
 			true,
 		);
+	});
+
+	it.each(["src", "src/generated", "dist", "dist/control"])(
+		"rejects the source-owned output path %s even when forced",
+		async (output) => {
+			const projectDir = await makeBuiltWebresource();
+			const appPath = path.join(projectDir, "src", "App.tsx");
+			const appBefore = await fs.readFile(appPath, "utf8");
+
+			await expect(
+				generatePcfFromExistingWebresource({
+					pcfDir: projectDir,
+					output,
+					controlConstructor: "UnsafeOutputHost",
+					force: true,
+				}),
+			).rejects.toThrow("PCF output directory cannot be");
+
+			await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
+		},
+	);
+
+	it("rejects an output alias that resolves into the source tree", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const outputAlias = path.join(projectDir, "pcf", "source-alias");
+		await fs.ensureDir(path.dirname(outputAlias));
+		await fs.symlink(path.join(projectDir, "src"), outputAlias, "junction");
+		const appPath = path.join(projectDir, "src", "App.tsx");
+		const appBefore = await fs.readFile(appPath, "utf8");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				output: outputAlias,
+				controlConstructor: "AliasedOutputHost",
+				force: true,
+			}),
+		).rejects.toThrow("PCF output directory cannot be src");
+
+		await expect(fs.readFile(appPath, "utf8")).resolves.toBe(appBefore);
 	});
 
 	it.each(["source", "output", "ancestor"])(

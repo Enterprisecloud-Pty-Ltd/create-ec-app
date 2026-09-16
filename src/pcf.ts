@@ -82,24 +82,7 @@ export async function generatePcfFromExistingWebresource(
 		projectDir,
 		options.output ?? path.join("pcf", constructorName),
 	);
-	// Resolve aliases before removing an existing output directory. It must not
-	// contain the source project, even when reached through a symlink or junction.
-	if (await fs.pathExists(outputDir)) {
-		const [realOutputDir, realProjectDir] = await Promise.all([
-			fs.realpath(outputDir),
-			fs.realpath(projectDir),
-		]);
-		const projectFromOutput = path.relative(realOutputDir, realProjectDir);
-		if (
-			projectFromOutput === "" ||
-			(projectFromOutput.split(path.sep)[0] !== ".." &&
-				!path.isAbsolute(projectFromOutput))
-		) {
-			throw new Error(
-				"PCF output directory cannot be the webresource project root or a directory that contains it. Choose a subdirectory such as --output pcf/MyControl.",
-			);
-		}
-	}
+	await assertSafePcfOutput(projectDir, outputDir, distDirName);
 	const templateDir = path.resolve(
 		options.template ?? path.join(__dirname, "..", "templates", "pcf", "base"),
 	);
@@ -339,20 +322,64 @@ async function assertReadablePcfLayer(
 		});
 	}
 
-	const realLayerDir = await fs.realpath(layerDir);
-	const realOutputDir = (await fs.pathExists(outputDir))
-		? await fs.realpath(outputDir)
-		: outputDir;
-	const layerFromOutput = path.relative(realOutputDir, realLayerDir);
+	const [realLayerDir, realOutputDir] = await Promise.all([
+		resolvePathAliases(layerDir),
+		resolvePathAliases(outputDir),
+	]);
 	if (
-		layerFromOutput === "" ||
-		(layerFromOutput.split(path.sep)[0] !== ".." &&
-			!path.isAbsolute(layerFromOutput))
+		isSameOrDescendant(realOutputDir, realLayerDir) ||
+		isSameOrDescendant(realLayerDir, realOutputDir)
 	) {
 		throw new Error(
-			`${label} directory cannot be the PCF output directory or inside it: ${layerDir}`,
+			`${label} directory cannot overlap the PCF output directory: ${layerDir}`,
 		);
 	}
+}
+
+async function assertSafePcfOutput(
+	projectDir: string,
+	outputDir: string,
+	distDirName: string,
+): Promise<void> {
+	const [realProjectDir, realOutputDir] = await Promise.all([
+		resolvePathAliases(projectDir),
+		resolvePathAliases(outputDir),
+	]);
+	if (isSameOrDescendant(realOutputDir, realProjectDir)) {
+		throw new Error(
+			"PCF output directory cannot be the webresource project root or a directory that contains it. Choose a subdirectory such as --output pcf/MyControl.",
+		);
+	}
+
+	for (const criticalDir of ["src", distDirName]) {
+		const realCriticalDir = await resolvePathAliases(
+			path.join(realProjectDir, criticalDir),
+		);
+		if (isSameOrDescendant(realCriticalDir, realOutputDir)) {
+			throw new Error(
+				`PCF output directory cannot be ${criticalDir} or a directory inside it. Choose a dedicated directory such as --output pcf/MyControl.`,
+			);
+		}
+	}
+}
+
+function isSameOrDescendant(parentDir: string, candidateDir: string): boolean {
+	const relative = path.relative(parentDir, candidateDir);
+	return (
+		relative === "" ||
+		(relative.split(path.sep)[0] !== ".." && !path.isAbsolute(relative))
+	);
+}
+
+async function resolvePathAliases(targetPath: string): Promise<string> {
+	let existingPath = path.resolve(targetPath);
+	const missingSegments: string[] = [];
+	while (!(await fs.pathExists(existingPath))) {
+		const parent = path.dirname(existingPath);
+		missingSegments.unshift(path.basename(existingPath));
+		existingPath = parent;
+	}
+	return path.join(await fs.realpath(existingPath), ...missingSegments);
 }
 
 async function ensureRuntimeTypes(projectDir: string): Promise<void> {

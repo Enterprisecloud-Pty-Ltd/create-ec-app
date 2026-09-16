@@ -105,3 +105,9 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Recorded the intended portal contract: SWA with Entra authentication, a linked Function App broker, and Dataverse application-user access. The portal reuses the SWA frontend but is a separate target because it adds backend authorization and configuration.
 - Replaced the alias recommendation with the intended architecture and explicit completion criteria in `docs/portal.md`. Documented the trusted identity boundary and separated application-user authentication from end-user licensing entitlement.
 - This records the intended design; the Function App broker remains unimplemented in the current generator.
+
+### 2026-09-16 - Copilot PCF safety follow-up
+
+- Rejected PCF outputs inside the source `src` or built `dist` trees, including aliases through symlinks or junctions, even when `--force` is supplied. Layer and template paths now fail when either side contains the other, preventing recursive self-copy.
+- Added `@types/xrm` to the standalone PCF wrapper because its TypeScript configuration explicitly loads those ambient types and the source webresource is not required to provide them.
+- Made the unreadable-directory regression POSIX-specific because Windows does not implement POSIX mode-bit denial. The cross-platform missing, non-directory, containment, and source-preservation tests remain active everywhere.
