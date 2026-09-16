@@ -1,0 +1,8 @@
+# Review ownership for the generator. Keep at least two active maintainers here
+# and in the npm package owners list (see docs/tooling.md, "Maintainership").
+* @ec-graham
+
+# Release and publishing surface: changes here can publish to npm.
+/.github/ @ec-graham
+/.releaserc.json @ec-graham
+/package.json @ec-graham

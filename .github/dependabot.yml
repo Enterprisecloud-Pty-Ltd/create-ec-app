@@ -1,0 +1,57 @@
+# Automated dependency proposals. CI (unit tests, scaffold smoke, and the full
+# generated build matrix) validates every PR before it can be merged.
+#
+# Not covered here, by design:
+# - templates/ui/*/package.patch.json (Kendo, shadcn) and templates/pcf/base use
+#   placeholder manifests or must be refreshed together with vendored source.
+#   Use `bash update-templates.sh` and `$update-templates` for those.
+# - Compiler and lint-engine pins (typescript aliases, oxlint-tsgolint) need a
+#   deliberate compatibility review; see docs/tooling.md.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Johannesburg
+    groups:
+      cli-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+      - dependency-name: oxlint-tsgolint
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /templates/base
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Johannesburg
+    groups:
+      generated-app-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+      - dependency-name: "@typescript/native"
+      - dependency-name: oxlint-tsgolint
+      - dependency-name: oxlint
+        update-types: [version-update:semver-major]
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Africa/Johannesburg
+    commit-message:
+      prefix: chore

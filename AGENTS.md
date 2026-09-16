@@ -47,3 +47,11 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Added the `dynamics-webapi` skill and its standard-library Python helper to generated web-resource projects. Codex discovers the canonical `.agents` copy; Claude Code receives a small `.claude` entry that points to the same instructions.
 - Kept the skill read-only and target-specific. Updated the generated README and scaffold smoke checks to cover both web-resource UI variants and prove the other targets do not receive it.
 - Both skill entrypoints passed the skill validator, the Python helper compiled and matched the personal source, all 97 repository tests passed with 100% coverage, scaffold smoke checks passed, and the npm dry-run package contained all three generated skill files.
+
+### 2026-09-16 - Handover review: maintainership and automation
+
+- Review of the 2026-09-14 to 2026-09-16 changes found no code defects; the gaps were operational. The npm package had a single owner, `main` was unprotected while auto-publishing, no tool proposed dependency updates, and scheduled build failures were silent.
+- Added `.github/dependabot.yml` (weekly grouped minor/patch updates for the CLI, `templates/base`, and workflow actions; compiler and lint-engine pins excluded), `.github/CODEOWNERS`, and a job that opens or updates a `generated-build` issue when the Monday scheduled matrix fails.
+- Aligned the release job to Node 22 (the tested floor) and set `package.json` to semantic-release's `0.0.0-development` convention; the released version comes from `npm view create-ec-app version`.
+- Removed client and personal environment names from the generated `dynamics-webapi` skill and declared the repository copy canonical. Added a "Maintainership" section to `docs/tooling.md` covering npm owners, branch protection, commit conventions, the Dependabot flow, and quarterly manual checks.
+- Still requires an account holder: add a second npm owner and enable branch protection on `main`. Verified with `npm run check` and `npm run smoke:scaffold`.
