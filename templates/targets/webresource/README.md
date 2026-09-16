@@ -10,6 +10,7 @@ React + TypeScript template for Dynamics 365/Dataverse web resources. Generated 
 - TanStack Query provider pre-wired (`QueryClientProvider` in `src/main.tsx`)
 - XRM-aware runtime: adds `ClientGlobalContext.js.aspx` and detects `window.Xrm`
 - Local development via `token.json` (excluded from bundling) and helper functions
+- Project-local `dynamics-webapi` skill for read-only Dataverse inspection from any AI agent
 - Vite build tuned for web resources: single JS bundle, `main.css`, deterministic names
 - Zustand and `@types/xrm` included for state and typings
 
@@ -31,6 +32,7 @@ React + TypeScript template for Dynamics 365/Dataverse web resources. Generated 
 
 - `src/main.tsx`: Sets up React, Tailwind, and TanStack Query. If Kendo UI was selected, imports the chosen theme CSS (`<theme>/dist/all.css`).
 - `src/services/AuthService.ts`: Utilities to build API URLs and headers based on environment (inside Dynamics vs. local dev).
+- `.agents/skills/dynamics-webapi/`: Read-only Dataverse shell skill and standard-library Python helper. Codex discovers it directly; the `.claude/skills` entry exposes the same skill to Claude Code.
 - `token.json`: Local development token store. Build is configured to treat this as external and not bundle it.
 - `index.html`: Injects `ClientGlobalContext.js.aspx` for Dynamics runtime.
 - `vite.config.ts`: Uses base `./`, disables code splitting, emits `main.css`, and places assets at the top of `dist`.
@@ -38,6 +40,12 @@ React + TypeScript template for Dynamics 365/Dataverse web resources. Generated 
 ## Auth and API Access
 
 The app auto-detects whether it runs inside Dynamics 365 (uses `window.Xrm` and does not add an Authorization header) or locally (reads a bearer token from `token.json`).
+
+For read-only environment checks and OData queries during development, invoke `$dynamics-webapi` in Codex or `/dynamics-webapi` in Claude Code. The bundled helper can also run directly from the repository root:
+
+```bash
+python3 .agents/skills/dynamics-webapi/scripts/dynamics_api.py <org-url-or-host> health
+```
 
 ```ts
 // src/services/AuthService.ts

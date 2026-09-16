@@ -36,3 +36,14 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Enabled `no-restyle` with layout classes allowed, `no-raw-colors`, `no-arbitrary-values`, and `require-static-classes`. Enabled `no-unknown-classes` as a warning so projects can establish external stylesheet exceptions before promoting it to an error. Left `no-inline-styles` disabled to preserve legitimate runtime styles.
 - Extended the generated lint fixture to prove the policies reject broken UI code and accept variant, layout, and theme-token usage.
 - Node 26.8.1 validation passed 97 unit tests with 100% coverage, scaffold and package-content checks, all eight generated app builds and lint runs, both PCF builds, CSS scoping, and the 13-failure/corrected lint fixture. Local dependency lifecycle scripts remained disabled, so Kendo license activation was not verified.
+
+### 2026-09-16 - Generated agent guidance refinement
+
+- Expanded shared component, service, state, and file-organization guidance from the edited webresource instructions. Kept Dataverse validation, critical-file boundaries, error handling, and the service example in the webresource overlay.
+- Replaced blanket approval gates and claims that core files are always correct with scope-based edits and verification. Preserved Figma fidelity and design-system lint guidance; narrowed the example update payload to editable fields.
+
+### 2026-09-16 - Generated Dataverse read-only skill
+
+- Added the `dynamics-webapi` skill and its standard-library Python helper to generated web-resource projects. Codex discovers the canonical `.agents` copy; Claude Code receives a small `.claude` entry that points to the same instructions.
+- Kept the skill read-only and target-specific. Updated the generated README and scaffold smoke checks to cover both web-resource UI variants and prove the other targets do not receive it.
+- Both skill entrypoints passed the skill validator, the Python helper compiled and matched the personal source, all 97 repository tests passed with 100% coverage, scaffold smoke checks passed, and the npm dry-run package contained all three generated skill files.

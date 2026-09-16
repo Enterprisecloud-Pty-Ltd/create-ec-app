@@ -104,6 +104,39 @@ try {
 		}
 
 		if (target === "webresource") {
+			assertRegularFileContains(
+				path.join(
+					projectDir,
+					".agents",
+					"skills",
+					"dynamics-webapi",
+					"SKILL.md",
+				),
+				".agents/skills/dynamics-webapi/scripts/dynamics_api.py",
+				`${projectName} Codex Dataverse skill`,
+			);
+			assertPath(
+				path.join(
+					projectDir,
+					".agents",
+					"skills",
+					"dynamics-webapi",
+					"scripts",
+					"dynamics_api.py",
+				),
+				`${projectName} Dataverse helper script`,
+			);
+			assertRegularFileContains(
+				path.join(
+					projectDir,
+					".claude",
+					"skills",
+					"dynamics-webapi",
+					"SKILL.md",
+				),
+				"../../../.agents/skills/dynamics-webapi/SKILL.md",
+				`${projectName} Claude Dataverse skill`,
+			);
 			assertPath(
 				path.join(projectDir, "src", "services", "AuthService.ts"),
 				`${projectName} webresource auth service`,
@@ -123,6 +156,11 @@ try {
 				path.join(projectDir, "AGENTS.md"),
 				"split Dynamics chrome",
 				`${projectName} webresource Figma host boundary`,
+			);
+		} else {
+			assertMissing(
+				path.join(projectDir, ".agents", "skills", "dynamics-webapi"),
+				`${projectName} target-specific Dataverse skill`,
 			);
 		}
 
