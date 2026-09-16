@@ -20,7 +20,38 @@ Node 26 is supported alongside Node 22. CI checks both versions, including the g
 
 See the shared [tooling and handover guide](docs/tooling.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
 
-Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
+UI layers are `shadcn-ui` and `kendo`.
+
+| Target | Hosting and generated guidance |
+|---|---|
+| `webresource` | Dynamics webresource, with host-specific `AGENTS.md`; can generate a separate PCF wrapper. |
+| `swa` | Azure Static Web Apps, with routing/deployment configuration and host-specific `AGENTS.md`. Use this for a portal hosted on SWA. |
+| `power-pages` | Microsoft Power Pages code site, with site-session guidance and host-specific `AGENTS.md`. |
+| `code-apps` | Power Apps Code App, with SDK configuration and host-specific `AGENTS.md`. |
+| `portal` | WIP placeholder: shared React/Vite base plus the chosen UI layer only. It does not inherit `swa`, provide SWA configuration, or generate `AGENTS.md`/`CLAUDE.md`. |
+
+The `portal` target needs an implemented host contract and target tests before it can be called complete. If it is intended to mean an SWA-hosted portal, it can reuse `swa` through a supported alias. Authentication, roles, and backend requirements remain application-specific.
+
+## Agent workflow
+
+Start with `npx --yes create-ec-app@latest --help`. Running the CLI without scaffold options starts interactive prompts. Agents should provide the project name, target, UI library, and installation choice explicitly:
+
+```bash
+npx --yes create-ec-app@latest --project-name my-swa --target swa --ui shadcn-ui --no-install --skip-git
+cd my-swa
+```
+
+Read the generated `AGENTS.md`, `README.md`, and `docs/tooling.md` before editing, then install and verify:
+
+```bash
+npm install
+npm run check
+npm run build
+```
+
+Use Node 22.14 or newer within Node 22, or use Node 26; both lines are covered by CI. Commit the newly generated lockfile and use `npm ci` for later installs. `--skip-git` leaves repository initialization to the caller. Power Pages uses `--target power-pages`; `portal` is not an alias for Power Pages or SWA.
+
+`@latest` selects the published npm release. An unmerged branch or pull request does not change the version installed by that command.
 
 Quick shadcn creates with dependency install:
 
@@ -167,27 +198,27 @@ npm run build
 ```bash
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/{{ControlName}} \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor {{ControlName}} \
-  --display-name "Control Name"
+  --constructor MyControlHost \
+  --display-name "My Control Host"
 ```
 
 3. Install dependencies inside that generated PCF directory:
 
 ```bash
-cd ./pcf/{{ControlName}}
+cd ./pcf/MyControlHost
 npm install
 npm run build
 ```
 
-This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
+This writes a standalone PCF project to `--output`. `--pcf-dir` identifies the source webresource; a relative `--output` is resolved from that source directory. If `--output` is omitted, the wrapper is generated under `pcf/<ConstructorName>` in the source project. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - scopes every non-keyframe CSS selector under the generated PCF host selector
 - creates `src/runtime/types.ts` only if that file does not already exist
-- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
+- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell
 - mounts your React app directly into the PCF container
 
 Regenerate after app code or CSS changes by running the same sequence again from the webresource root:
@@ -196,11 +227,11 @@ Regenerate after app code or CSS changes by running the same sequence again from
 npm run build
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/FusionNotebookHost \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor FusionNotebookHost \
-  --display-name "Fusion Notebook Host"
-cd pcf/FusionNotebookHost
+  --constructor MyControlHost \
+  --display-name "My Control Host"
+cd pcf/MyControlHost
 npm install
 npm run build
 ```
@@ -211,16 +242,16 @@ The output cannot be the source project or a directory containing it, including 
 
 What gets generated:
 
-- a minimal PCF wrapper project under `pcf/<ConstructorName>`
+- a minimal PCF wrapper project at `--output`, defaulting to `pcf/<ConstructorName>` in the source project
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
 - direct imports back to your webresource source
 - a generated `pcf-scoped.css` file with CSS selectors scoped to the PCF control
 
-What does not happen:
+Source and deployment boundaries:
 
-- your existing webresource project is not converted in place
-- your React source is not moved into the PCF project
-- the generated PCF project does not automatically get added to a Dataverse solution
+- The source webresource remains a separate runnable app. Generation adds runtime files and can rewrite shadcn portal components in its source.
+- React source stays in the webresource project and is imported by the wrapper.
+- Add the generated PCF project to a Dataverse solution separately; generation does not deploy it.
 
 ## Verification
 

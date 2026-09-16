@@ -1,6 +1,6 @@
 # {{CONTROL_DISPLAY_NAME}}
 
-This folder was generated from the webresource source using the checked-in PCF base template.
+This folder was generated from the webresource source at `{{PROJECT_ROOT_REL}}`, relative to this wrapper, using the checked-in PCF base template.
 
 This wrapper deliberately uses TypeScript 5.9 with Microsoft's `pcf-scripts`, whose webpack/ts-loader integration requires the older compiler API. The source webresource uses TypeScript 7 and Oxlint independently. Do not upgrade the wrapper's TypeScript major until the PCF toolchain supports it. Open this folder separately in VS Code and select its workspace TypeScript version.
 
@@ -13,7 +13,7 @@ npm run build
 
 ## Regenerate From Webresource Changes
 
-Do not edit this generated PCF folder as the durable source of truth. From the webresource root, rebuild and regenerate:
+Keep durable application changes in the source webresource. The example below uses the default `pcf/{{PCF_CONSTRUCTOR}}` output layout. If this wrapper was generated elsewhere, preserve that location in `--output` and the subsequent `cd` command. `--pcf-dir` selects the source app; relative output paths are resolved from that source app. From the webresource root, rebuild and regenerate:
 
 ```bash
 npm run build
@@ -22,6 +22,7 @@ npx create-ec-app@latest \
   --output ./pcf/{{PCF_CONSTRUCTOR}} \
   --namespace {{PCF_NAMESPACE}} \
   --constructor {{PCF_CONSTRUCTOR}} \
+  --version {{PCF_VERSION}} \
   --display-name "{{CONTROL_DISPLAY_NAME}}"
 cd pcf/{{PCF_CONSTRUCTOR}}
 npm install

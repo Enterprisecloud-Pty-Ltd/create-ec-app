@@ -17,4 +17,4 @@ This directory is a generated PCF host for the React webresource in `{{PROJECT_R
 
 Run `npm run lint` and `npm run build` in this directory. These checks prove the wrapper compiles and passes the PCF toolchain. They do not prove installation, runtime behaviour in Dynamics, or deployment to Dataverse.
 
-See `README.md` for the exact regeneration command and source paths.
+See `README.md` for the build and regeneration workflow and source path. Preserve this wrapper's existing output location when regenerating; the example uses the default layout.

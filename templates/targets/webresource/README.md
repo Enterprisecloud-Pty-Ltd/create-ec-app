@@ -283,28 +283,28 @@ npm run build
 ```bash
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/{{ControlName}} \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor {{ControlName}} \
-  --display-name "Control Name"
+  --constructor MyControlHost \
+  --display-name "My Control Host"
 ```
 
 3. Install dependencies inside that generated PCF directory:
 
 ```bash
-cd ./pcf/{{ControlName}}
+cd ./pcf/MyControlHost
 npm install
 npm run build
 ```
 
-This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
+This writes a standalone PCF project to `--output`. `--pcf-dir` identifies the source webresource; a relative `--output` is resolved from that source directory. If `--output` is omitted, the wrapper is generated under `pcf/<ConstructorName>` in the source project. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - scopes every non-keyframe CSS selector under the generated PCF host selector
 - keeps shadcn portals and Kendo popups inside the control's scoped portal root
 - creates `src/runtime/types.ts` only if that file does not already exist
-- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
+- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell
 - mounts your React app directly into the PCF container
 
 Regenerate after app code or CSS changes by running the same sequence again from the webresource root:
@@ -313,11 +313,11 @@ Regenerate after app code or CSS changes by running the same sequence again from
 npm run build
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/FusionNotebookHost \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor FusionNotebookHost \
-  --display-name "Fusion Notebook Host"
-cd pcf/FusionNotebookHost
+  --constructor MyControlHost \
+  --display-name "My Control Host"
+cd pcf/MyControlHost
 npm install
 npm run build
 ```

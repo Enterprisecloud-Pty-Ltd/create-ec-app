@@ -93,3 +93,9 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Restored the [shadcn neutral theme](https://ui.shadcn.com/docs/theming) and preserved it during registry refresh. PCF CSS now unwraps cascade layers after selector scoping because Dynamics unlayered reset rules otherwise win over Tailwind utilities. Bound fields remain unchanged, and generated PCF bundles exclude webresource token authentication.
 - Added a real combination-layer scaffold fixture after clean Linux CI exposed coverage that had depended on an empty local template directory. Coverage thresholds remain unchanged.
 - Added [`docs/handover.md`](docs/handover.md) with compatibility sources, final gates, upstream recheck conditions, and the remaining npm-owner and branch-protection actions. Live test-environment details remain in a separate local deployment report and are not part of the public repository.
+
+### 2026-09-16 - Agent usage and target documentation
+
+- Added a non-interactive agent workflow and a target table. Clarified that `portal` currently applies only the shared base and selected UI, without SWA configuration or host agent guidance; `swa` is the implemented target for an SWA-hosted portal.
+- Corrected PCF source/output terminology in the repository and generated webresource READMEs. Used runnable example names, documented source mutations, and clarified that wrapper regeneration examples must preserve custom output locations and control versions.
+- Verified repository links, packed package contents, scaffold smoke checks, and a PCF documentation fixture with a custom output path and version. No runtime behavior changed, so the full dependency/build matrix was not repeated locally.
