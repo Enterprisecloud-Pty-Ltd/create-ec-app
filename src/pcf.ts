@@ -37,6 +37,7 @@ export interface PcfCliOptions {
 	description?: string | undefined;
 	displayName?: string | undefined;
 	dist?: string | undefined;
+	force?: boolean | undefined;
 	layers?: string[] | undefined;
 	namespace?: string | undefined;
 	output?: string | undefined;
@@ -126,6 +127,7 @@ export async function generatePcfFromExistingWebresource(
 		constructorName,
 	);
 
+	await assertRemovablePcfOutput(outputDir, options.force ?? false);
 	await fs.remove(outputDir);
 	await applyLayer(templateDir, outputDir);
 	for (const layerDir of layerDirs) {
@@ -162,6 +164,33 @@ export async function generatePcfFromExistingWebresource(
 		outputDir,
 		templateDir,
 	};
+}
+
+// Generated PCF controls always carry the template manifest, so its presence is
+// the marker that removing the directory is safe. Anything else needs --force.
+async function assertRemovablePcfOutput(
+	outputDir: string,
+	force: boolean,
+): Promise<void> {
+	if (!(await fs.pathExists(outputDir))) {
+		return;
+	}
+
+	const entries = await fs.readdir(outputDir);
+	if (entries.length === 0) {
+		return;
+	}
+
+	const looksGenerated = await fs.pathExists(
+		path.join(outputDir, "control", "ControlManifest.Input.xml"),
+	);
+	if (looksGenerated || force) {
+		return;
+	}
+
+	throw new Error(
+		`PCF output directory "${outputDir}" is not empty and does not look like a generated PCF control. Use --force to overwrite it.`,
+	);
 }
 
 async function ensureRuntimeTypes(projectDir: string): Promise<void> {

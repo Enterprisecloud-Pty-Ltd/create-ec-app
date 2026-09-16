@@ -12,6 +12,7 @@ import {
 	main,
 	parseCliArgs,
 	printHelp,
+	printVersion,
 	readStringOption,
 	readTarget,
 	readUiType,
@@ -415,8 +416,18 @@ describe("scaffoldProject", () => {
 		await expect(fs.pathExists(path.join(projectDir, ".git"))).resolves.toBe(false);
 		await expect(fs.pathExists(path.join(projectDir, "token.json"))).resolves.toBe(false);
 		await expect(
+			fs.pathExists(path.join(projectDir, "package-lock.json")),
+		).resolves.toBe(false);
+		await expect(
 			fs.pathExists(path.join(projectDir, "src", "services", "AuthService.ts")),
 		).resolves.toBe(false);
+
+		const packageJson = await fs.readJson(path.join(projectDir, "package.json"));
+		expect(packageJson.name).toBe("code-app-demo");
+
+		const gitignore = await fs.readFile(path.join(projectDir, ".gitignore"), "utf8");
+		expect(gitignore).toContain("token.json");
+		expect(gitignore).toContain("!.vscode/settings.json");
 
 		const agents = await fs.readFile(path.join(projectDir, "AGENTS.md"), "utf8");
 		expect(agents).toContain("Power Apps-hosted code app");
@@ -439,9 +450,12 @@ describe("scaffoldProject", () => {
 			skipGit: true,
 		});
 
-		await expect(
-			fs.readFile(path.join(rootDir, "power-pages-kendo", "src", "main.tsx"), "utf8"),
-		).resolves.toContain("<AuthProvider>");
+		const mainTsx = await fs.readFile(
+			path.join(rootDir, "power-pages-kendo", "src", "main.tsx"),
+			"utf8",
+		);
+		expect(mainTsx).toContain("<AuthProvider>");
+		expect(mainTsx).toContain("@progress/kendo-theme-fluent/dist/all.css");
 
 		const agents = await fs.readFile(
 			path.join(rootDir, "power-pages-kendo", "AGENTS.md"),
@@ -451,6 +465,28 @@ describe("scaffoldProject", () => {
 		expect(agents).toContain("root-relative `/_api/...` URLs");
 		expect(agents).toContain("split Power Pages site header");
 		expect(agents).toContain("local `/_api` proxy smoke test");
+	});
+
+	it("warns that the portal target is a work in progress", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+
+		await scaffoldProject({
+			projectName: "portal-demo",
+			target: "portal",
+			uiType: "kendo",
+			install: false,
+			force: false,
+			skipGit: true,
+		});
+
+		const projectDir = path.join(rootDir, "portal-demo");
+		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
+			true,
+		);
+		await expect(fs.pathExists(path.join(projectDir, "AGENTS.md"))).resolves.toBe(
+			false,
+		);
 	});
 
 	it("can scaffold from the base template when target and UI layers are absent", async () => {
@@ -587,6 +623,43 @@ describe("main", () => {
 		expect(exit).toHaveBeenCalledWith(0);
 	});
 
+	it("prints the CLI version and exits without prompting", async () => {
+		process.argv = ["node", "create-ec-app", "--version"];
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process exit");
+		}) as never);
+
+		await expect(main()).rejects.toThrow("process exit");
+
+		expect(log).toHaveBeenCalledWith("0.0.0-development");
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("prints the CLI version for the -v shorthand", async () => {
+		process.argv = ["node", "create-ec-app", "-v"];
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process exit");
+		}) as never);
+
+		await expect(main()).rejects.toThrow("process exit");
+
+		expect(log).toHaveBeenCalledWith("0.0.0-development");
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("prints unknown when the CLI package version is missing", async () => {
+		const rootDir = await makeTempDir();
+		const packageJsonPath = path.join(rootDir, "package.json");
+		await fs.writeJson(packageJsonPath, { name: "no-version" });
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+		printVersion(packageJsonPath);
+
+		expect(log).toHaveBeenCalledWith("unknown");
+	});
+
 	it("runs the non-interactive scaffold path", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
@@ -629,12 +702,13 @@ describe("main", () => {
 		process.argv = [
 			"node",
 			"create-ec-app",
-			"--pcf-dir",
-			projectDir,
+			`--pcf-dir=${projectDir}`,
 			"--output",
 			"pcf/MainHost",
 			"--constructor",
 			"MainHost",
+			"--version",
+			"9.9.9",
 		];
 
 		await main();

@@ -7,8 +7,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const cliPath = path.join(repoRoot, "dist", "index.js");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-ec-app-smoke-"));
+const packedPrefix = path.join(tempRoot, "packed-cli");
+// Scaffold through the published tarball, not the repo, so publish-time file
+// stripping (for example npm dropping .gitignore) is caught here.
+const cliPath = path.join(
+	packedPrefix,
+	"node_modules",
+	"create-ec-app",
+	"dist",
+	"index.js",
+);
 
 const matrix = [
 	["webresource", "kendo"],
@@ -23,6 +32,33 @@ const matrix = [
 
 try {
 	execFileSync("npm", ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
+
+	const packOutput = execFileSync(
+		"npm",
+		["pack", "--pack-destination", tempRoot],
+		{ cwd: repoRoot, encoding: "utf8" },
+	);
+	const tarballName = packOutput
+		.trim()
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.pop();
+	fs.mkdirSync(packedPrefix, { recursive: true });
+	execFileSync(
+		"npm",
+		[
+			"install",
+			path.join(tempRoot, tarballName),
+			"--prefix",
+			packedPrefix,
+			"--no-save",
+			"--ignore-scripts",
+			"--no-audit",
+			"--no-fund",
+		],
+		{ cwd: tempRoot, stdio: "inherit" },
+	);
 
 	const helpOutput = execFileSync("node", [cliPath, "--help"], {
 		cwd: tempRoot,
@@ -60,6 +96,24 @@ try {
 		assertPath(path.join(projectDir, "package.json"), `${projectName} package.json`);
 		assertPath(path.join(projectDir, "src", "App.tsx"), `${projectName} App.tsx`);
 		assertMissing(path.join(projectDir, ".git"), `${projectName} .git directory`);
+		assertMissing(
+			path.join(projectDir, "package-lock.json"),
+			`${projectName} stale template lockfile`,
+		);
+		const generatedPackageJson = readJson(path.join(projectDir, "package.json"));
+		assert(
+			generatedPackageJson.name === projectName,
+			`${projectName} package.json name should be the project name`,
+		);
+		const gitignore = fs.readFileSync(path.join(projectDir, ".gitignore"), "utf8");
+		assert(
+			gitignore.includes("token.json"),
+			`${projectName} .gitignore should ignore token.json`,
+		);
+		assert(
+			gitignore.includes("!.vscode/settings.json"),
+			`${projectName} .gitignore should keep shared VS Code settings`,
+		);
 		assertRegularFileContains(
 			path.join(projectDir, "CLAUDE.md"),
 			"@AGENTS.md",
@@ -178,6 +232,18 @@ try {
 				"split Power Pages site header",
 				`${projectName} Power Pages Figma host boundary`,
 			);
+			if (ui === "kendo") {
+				assertFileContains(
+					path.join(projectDir, "src", "main.tsx"),
+					"<AuthProvider>",
+					`${projectName} power pages kendo auth provider`,
+				);
+				assertFileContains(
+					path.join(projectDir, "src", "main.tsx"),
+					"@progress/kendo-theme-fluent/dist/all.css",
+					`${projectName} power pages kendo theme import`,
+				);
+			}
 		}
 
 		if (target === "swa") {
@@ -218,6 +284,26 @@ try {
 			);
 		}
 	}
+
+	const portalDir = path.join(tempRoot, "portal-wip");
+	execFileSync(
+		"node",
+		[
+			cliPath,
+			"--project-name",
+			"portal-wip",
+			"--target",
+			"portal",
+			"--ui",
+			"kendo",
+			"--no-install",
+			"--skip-git",
+		],
+		{ cwd: tempRoot, stdio: "pipe" },
+	);
+	assertPath(path.join(portalDir, "package.json"), "portal-wip package.json");
+	assertMissing(path.join(portalDir, "AGENTS.md"), "portal-wip AGENTS.md");
+	assertMissing(path.join(portalDir, "CLAUDE.md"), "portal-wip CLAUDE.md");
 
 	const guardedProject = path.join(tempRoot, "existing-project");
 	fs.mkdirSync(guardedProject);

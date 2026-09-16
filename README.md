@@ -35,6 +35,7 @@ Useful CLI flags:
 
 - `--force`: overwrite an existing non-empty project directory.
 - `--skip-git`: skip `git init`, `git add .`, and the initial commit.
+- `--version` / `-v`: print the CLI version and exit.
 - `--help` / `-h`: print usage and exit without prompting.
 
 By default, existing non-empty project directories fail with a clear error. Existing empty directories are reused. Git initialization still runs by default unless `--skip-git` is passed.
@@ -145,6 +146,10 @@ bash update-templates.sh
 
 The script updates compatible minor dependency ranges and lockfiles, stops on errors, and avoids installing template `node_modules`. It preserves the TypeScript/compiler-engine pins and leaves the shadcn snapshot to `npm run refresh:shadcn-template`, which updates source and dependencies together. Review compiler and engine upgrades manually using the [tooling guide](docs/tooling.md).
 
+Generated apps do not ship the base template's `package-lock.json`: target and UI layers change the dependency set, so the template lockfile would be stale and break `npm ci`. The first `npm install` inside the generated app creates the real lockfile to commit.
+
+Template `.gitignore` files are stored as `gitignore` (npm strips dotfiles named `.gitignore` when packing) and renamed to `.gitignore` while layering. Target-and-UI-specific file overrides live in `templates/combinations/<target>-<ui>` and apply after the target and UI layers.
+
 ## Generate a PCF Control
 
 If you want to host the React webresource inside a PCF control instead of loading the HTML webresource directly in an iframe, use `create-ec-app` itself to generate the wrapper for an existing webresource project.
@@ -200,7 +205,7 @@ npm install
 npm run build
 ```
 
-Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes.
+Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes. Removal is only automatic when the folder still looks like a generated control; if the output directory contains unrelated content, pass `--force` to overwrite it.
 
 What gets generated:
 
@@ -227,7 +232,7 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, packs the npm tarball, installs it, and scaffolds the target/UI matrix through the installed package with `--no-install --skip-git`, checking the generated file shape including `.gitignore` contents — so publish-time file stripping is caught locally. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
 
 Run `npm run check` for the CLI's typecheck, Oxlint, and unit tests. VS Code recommendations and settings are supplied for the CLI and generated apps.
 

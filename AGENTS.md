@@ -55,3 +55,13 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Aligned the release job to Node 22 (the tested floor) and set `package.json` to semantic-release's `0.0.0-development` convention; the released version comes from `npm view create-ec-app version`.
 - Removed client and personal environment names from the generated `dynamics-webapi` skill and declared the repository copy canonical. Added a "Maintainership" section to `docs/tooling.md` covering npm owners, branch protection, commit conventions, the Dependabot flow, and quarterly manual checks.
 - Still requires an account holder: add a second npm owner and enable branch protection on `main`. Verified with `npm run check` and `npm run smoke:scaffold`.
+
+### 2026-09-16 - Scaffold output correctness fixes
+
+- npm strips `.gitignore` files when packing, so template gitignores never reached generated apps and the fallback ignore lacked `token.json`, causing the initial `git commit` to track the bearer-token file. Templates now store `gitignore` and `applyLayer` renames it to `.gitignore`; the fallback mirrors the template, and generated PCF controls get a `.gitignore` for the first time.
+- Generated apps no longer ship `templates/base/package-lock.json`: layer dependency merges made it stale, so `npm ci` failed in every generated app. The first `npm install` creates the real lockfile, matching the generated tooling guide.
+- Generated `package.json` now uses `{{APP_NAME}}` for `name` instead of the literal `base`.
+- Target∩UI overrides moved to `templates/combinations/<target>-<ui>` applied after both layers; the hardcoded Power Pages + Kendo `main.tsx` string is now `templates/combinations/power-pages-kendo/src/main.patch.tsx`.
+- `portal` scaffolds with an explicit work-in-progress warning. PCF generation refuses to remove a non-empty output directory that lacks the generated-control marker unless `--force` is passed. `create-ec-app --version`/`-v` prints the CLI version; in PCF mode `--version` remains the control version.
+- The npm package no longer ships `scripts/` or a nonexistent `bin/`. The scaffold smoke test now packs the tarball, installs it, and scaffolds through the installed CLI, asserting `.gitignore` contents, lockfile absence, and the package name — closing the gap that let publish-time stripping go unnoticed.
+- Verified with `npm run check` (104 tests, 100% coverage), `npm run smoke:scaffold` through the packed tarball, and `npm run build:generated` (all eight generated apps and both PCF wrappers).

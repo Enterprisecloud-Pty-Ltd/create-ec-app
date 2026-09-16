@@ -178,6 +178,60 @@ describe("generatePcfFromExistingWebresource", () => {
 		).resolves.toBe("MinimalHost minimal-host-package");
 	});
 
+	it("refuses to overwrite a non-empty output directory that is not a generated control", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const outputDir = path.join(projectDir, "pcf", "Existing");
+		await fs.outputFile(path.join(outputDir, "keep.txt"), "do not overwrite");
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				output: "pcf/Existing",
+				controlConstructor: "ExistingHost",
+			}),
+		).rejects.toThrow("Use --force to overwrite it.");
+
+		await expect(
+			fs.readFile(path.join(outputDir, "keep.txt"), "utf8"),
+		).resolves.toBe("do not overwrite");
+	});
+
+	it("overwrites a foreign output directory only when forced", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const outputDir = path.join(projectDir, "pcf", "Forced");
+		await fs.outputFile(path.join(outputDir, "keep.txt"), "do not overwrite");
+
+		await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			output: "pcf/Forced",
+			controlConstructor: "ForcedHost",
+			force: true,
+		});
+
+		await expect(fs.pathExists(path.join(outputDir, "keep.txt"))).resolves.toBe(
+			false,
+		);
+		await expect(
+			fs.pathExists(path.join(outputDir, "ForcedHost.pcfproj")),
+		).resolves.toBe(true);
+	});
+
+	it("reuses an empty output directory without forcing", async () => {
+		const projectDir = await makeBuiltWebresource();
+		const outputDir = path.join(projectDir, "pcf", "Empty");
+		await fs.ensureDir(outputDir);
+
+		await generatePcfFromExistingWebresource({
+			pcfDir: projectDir,
+			output: "pcf/Empty",
+			controlConstructor: "EmptyHost",
+		});
+
+		await expect(
+			fs.pathExists(path.join(outputDir, "EmptyHost.pcfproj")),
+		).resolves.toBe(true);
+	});
+
 	it("rejects using the project root as the PCF output directory", async () => {
 		const projectDir = await makeBuiltWebresource();
 

@@ -116,6 +116,7 @@ describe("applyLayer", () => {
 		});
 		await fs.outputFile(path.join(layerDir, "src", "App.patch.tsx"), "patched");
 		await fs.outputFile(path.join(layerDir, "README.md"), "copied");
+		await fs.outputFile(path.join(layerDir, "gitignore"), "node_modules/\n");
 
 		await applyLayer(layerDir, projectDir);
 
@@ -130,6 +131,12 @@ describe("applyLayer", () => {
 		await expect(
 			fs.readFile(path.join(projectDir, "README.md"), "utf8"),
 		).resolves.toBe("copied");
+		await expect(
+			fs.readFile(path.join(projectDir, ".gitignore"), "utf8"),
+		).resolves.toBe("node_modules/\n");
+		await expect(fs.pathExists(path.join(projectDir, "gitignore"))).resolves.toBe(
+			false,
+		);
 	});
 
 	it("throws when a JSON patch is not an object", async () => {

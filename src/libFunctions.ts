@@ -57,7 +57,9 @@ export async function applyLayer(layerDir: string, projectDir: string) {
 			continue;
 		}
 
-		const targetPath = path.join(projectDir, relPath);
+		//INFO: npm strips .gitignore files when packing, so templates store them as `gitignore`.
+		const outputName = entry.name === "gitignore" ? ".gitignore" : entry.name;
+		const targetPath = path.join(projectDir, outputName);
 		await fs.ensureDir(path.dirname(targetPath));
 		await fs.copy(layerPath, targetPath);
 	}

@@ -42,6 +42,7 @@ Useful official starting points; follow newer releases from these pages rather t
 
 - Update the root CLI, `templates/base`, target/UI dependency patches, and `templates/pcf/base` according to their own compatibility constraints. Do not apply a blanket major-version bump across these different toolchains.
 - `bash update-templates.sh` refreshes compatible minor ranges and template locks, preserves compiler/engine pins, and skips the shadcn snapshot. Review its diff; it does not decide major-version compatibility. Handle root dependencies and supported compiler changes explicitly. Keep template folders free of `node_modules`.
+- Layer conventions: template `.gitignore` files are stored as `gitignore` and renamed on write because npm strips dotfiles named `.gitignore`; generated apps do not receive `templates/base/package-lock.json` since layer dependency merges would leave it stale; target∩UI file overrides belong in `templates/combinations/<target>-<ui>`.
 - For shadcn, inspect the current CLI docs, update the deliberate CLI pins in `scripts/refresh-shadcn-template.ts` and `src/shadcnRegistry.ts` together, and run `npm run refresh:shadcn-template`. Preserve EC's portal transforms and CSS scoping. Review source, `SHADCN_TEMPLATE.md`, dependency patch, and affected tests together.
 - Keep manifests, lockfiles, compiler aliases, editor settings, and the CI Node matrix consistent. Preserve each host's auth and deployment output. An upgrade request does not authorize live deployment, npm publication, or merging to `main`.
 
