@@ -55,11 +55,29 @@ jobs:
               "Start with `docs/tooling.md` and the `update-templates` skill; do not loosen lint rules or force peer resolution to make it pass.",
             ].join("\n");
 
+            const label = "generated-build";
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label,
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label,
+                color: "d73a4a",
+                description: "Weekly generated-build matrix failed",
+              });
+            }
+
             const { data: open } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: "open",
-              labels: "generated-build",
+              labels: label,
               per_page: 1,
             });
 
@@ -78,5 +96,5 @@ jobs:
               repo: context.repo.repo,
               title,
               body,
-              labels: ["generated-build"],
+              labels: [label],
             });
