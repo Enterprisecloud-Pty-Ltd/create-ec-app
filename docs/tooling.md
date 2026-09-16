@@ -69,3 +69,19 @@ npm run build:generated
 The 2026-09-05 local validation used Node 26.8.1: 85 unit tests passed with 100% coverage, all eight app builds/lints passed, and both PCF wrappers and CSS checks passed. Dependency lifecycle scripts were disabled for that local run; Kendo license activation and live Microsoft-hosted deployments were not verified. This is a dated baseline, not evidence for a future upgrade.
 
 When maintaining tooling, update this guide and the generated app guide where behavior changes. Add a dated entry to the root `AGENTS.md` changelog covering versions changed, compatibility exceptions, supporting source links, checks run, and any deferred upgrade's concrete recheck condition. Generated targets have their own `AGENTS.md` changelog for app-facing changes.
+
+## Maintainership
+
+The generator only stays current if more than one person can operate every part of it. Check this list when someone joins or leaves the team.
+
+**npm package.** `create-ec-app` is published from GitHub Actions through npm trusted publishing (OIDC), so releases do not depend on anyone's npm token. Managing the package does: changing the trusted publisher, deprecating versions, or recovering 2FA needs an npm owner. Keep at least two active EC accounts as owners and confirm with `npm owner ls create-ec-app`. Add one with `npm owner add <npm-username> create-ec-app`.
+
+**GitHub.** [`.github/CODEOWNERS`](../.github/CODEOWNERS) lists the reviewers for the release surface; keep it aligned with the npm owners. Protect `main` in repository settings: require a pull request, require the `build-test-smoke` and `generated-build` checks, and disallow force pushes. Every push to `main` with a `feat:` or `fix:` commit publishes a new npm version, so `main` should only receive reviewed merges.
+
+**Versioning.** semantic-release derives the next version from Conventional Commit messages and does not write it back to `package.json`, which intentionally stays at `0.0.0-development`. Find the released version with `npm view create-ec-app version`. Commit subjects become the public release notes, so write them for a reader: `feat: add Dataverse read-only skill to webresource scaffold`, not a narration of what you did. Use `docs:` or `chore:` for changes that should not publish.
+
+**Dependency flow.** [`.github/dependabot.yml`](../.github/dependabot.yml) opens weekly grouped PRs for the CLI, `templates/base`, and the workflow actions; CI runs the full generated matrix on each. Merge green groups. Compiler and lint-engine pins (`typescript` aliases, `oxlint-tsgolint`, PCF) are excluded because they need the compatibility review described above; the Kendo and shadcn patches and the PCF template are refreshed with `bash update-templates.sh` and `$update-templates`. Set a quarterly reminder to run that skill even when Dependabot is quiet, and to reassess the PCF TypeScript exception.
+
+**Monitoring.** The generated build also runs every Monday on a schedule. A failure opens or updates an issue labelled `generated-build`; treat it as the signal that an upstream release broke the templates. Do not fix it by loosening lint rules or forcing peer resolution.
+
+**Not verifiable from CI.** Kendo license activation and live deployments to Dynamics, Power Pages, Static Web Apps, and Power Apps are exercised only by generating an app and deploying it. Do this once per quarter, or after any change to a target's auth or deployment output.

@@ -17,7 +17,7 @@ Run the command from the repository root. On Windows use `python` or `py` with t
 
 The first argument is the organisation. `contoso.crm.dynamics.com`, `https://contoso.crm.dynamics.com`, and `https://contoso.crm.dynamics.com/api/data/v9.2` all normalise to `https://contoso.crm.dynamics.com`.
 
-When the user names an environment instead of a URL ("AGI UAT", "E6 Prod"), look it up in `~/.OpenDataverse/config.json`. Its `environments` list maps display names to URLs. Several clients have Dev, UAT, QA, and Prod entries, so confirm which one when the user's wording does not pin it down.
+When the user names an environment instead of a URL ("Contoso UAT", "Fabrikam Prod"), look it up in `~/.OpenDataverse/config.json` if that file exists. Its `environments` list maps display names to URLs. Clients often have Dev, UAT, QA, and Prod entries, so confirm which one when the user's wording does not pin it down. If no config exists, ask for the organisation URL.
 
 ## Actions
 
@@ -42,10 +42,10 @@ Quote the query in single quotes so the shell leaves `$select` alone. Spaces and
 
 ## Authentication
 
-Token sources, in order. The first valid one wins.
+Token sources, in order. The first valid one wins. Only `./token.json` and Azure CLI are required; the other two are optional caches that the script uses when present.
 
 1. `./token.json` in the current directory, Azure CLI shape, not expired.
-2. `~/.OpenDataverse/config.json` matched by environment URL, with the token in `~/.OpenDataverse/tokens/token-<environmentId>.json`. An expired token is refreshed with its stored `refreshToken` against the Entra token endpoint using scope `<org-url>/user_impersonation offline_access`, and the file is rewritten.
+2. `~/.OpenDataverse/config.json` matched by environment URL, with the token in `~/.OpenDataverse/tokens/token-<environmentId>.json`. Present only on machines that use the OpenDataverse tooling. An expired token is refreshed with its stored `refreshToken` against the Entra token endpoint using scope `<org-url>/user_impersonation offline_access`, and the file is rewritten.
 3. `~/.dynamics/token.json`, Azure CLI shape.
 4. Azure CLI. Runs `az login --allow-no-subscriptions` (pass `--tenant <id-or-domain>` to the script when the account spans tenants), then `az account get-access-token --resource <org-url>`. The result is written to `~/.dynamics/token.json` if that file existed, otherwise to `./token.json`.
 
@@ -67,4 +67,5 @@ OpenDataverse token shape:
 
 - Read-only. For writes, or for anything that touches solutions or components, stop and follow the Dynamics rules in the repository's `AGENTS.md`.
 - Never paste tokens into notes, chat, or commits. Token files may already sit in the repo root as `token.json`; do not add them to git.
+- This project's copy of the script is the canonical one. Change it here and cover it with the generator's scaffold smoke checks; do not depend on a copy on someone's machine.
 
