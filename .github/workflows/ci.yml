@@ -43,6 +43,11 @@ jobs:
 
   generated-build:
     uses: ./.github/workflows/generated-build.yml
+    # The called workflow files an issue on scheduled failures; a reusable
+    # workflow cannot request more than the caller grants.
+    permissions:
+      contents: read
+      issues: write
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
