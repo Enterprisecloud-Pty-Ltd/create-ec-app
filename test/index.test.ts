@@ -499,6 +499,33 @@ describe("scaffoldProject", () => {
 		expect(agents).toContain("local `/_api` proxy smoke test");
 	});
 
+	it("applies combination patches after the target and UI layers", async () => {
+		const rootDir = await makeTempDir();
+		const combinationDir = path.resolve(import.meta.dirname, "../templates/combinations/power-pages-kendo");
+		const patchPath = path.join(combinationDir, "package.patch.json");
+		const directoryExisted = await fs.pathExists(combinationDir);
+		const originalPatch = await fs.pathExists(patchPath) ? await fs.readFile(patchPath) : undefined;
+		try {
+			await fs.outputJson(patchPath, {
+				description: "{{APP_NAME}} combination",
+				scripts: { dev: "combination-dev" },
+			});
+			process.chdir(rootDir);
+			await scaffoldProject({
+				projectName: "combined-app", target: "power-pages", uiType: "kendo",
+				install: false, force: false, skipGit: true,
+			});
+			const generated = await fs.readJson(path.join(rootDir, "combined-app", "package.json"));
+			expect(generated.description).toBe("combined-app combination");
+			expect(generated.scripts.dev).toBe("combination-dev");
+			expect(generated.dependencies["@progress/kendo-react-buttons"]).toBe("^15.1.0");
+		} finally {
+			if (originalPatch === undefined) await fs.remove(patchPath);
+			else await fs.writeFile(patchPath, originalPatch);
+			if (!directoryExisted) await fs.rmdir(combinationDir);
+		}
+	});
+
 	it("warns that the portal target is a work in progress", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);

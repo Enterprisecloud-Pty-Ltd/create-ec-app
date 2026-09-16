@@ -26,7 +26,7 @@ The dependency refresh moved Oxlint to 1.83.0 and Vitest plus coverage to 5.0.1,
 
 The final local gates passed on Node 26.8.1 and the advertised minimum Node 22.14.0:
 
-- 141 unit tests with 100% statement, branch, function, and line coverage; CLI typecheck and lint.
+- 142 unit tests with 100% statement, branch, function, and line coverage; CLI typecheck and lint.
 - Packed-package scaffolding, all eight generated app builds and zero-warning lint runs, fresh installs followed by `npm ci`, and TypeScript dependency-tree checks.
 - Both PCF builds and lint commands, source-app checks after conversion, scoped CSS with no cascade layers, and the failing/passing lint fixture including TypeScript compilation.
 - Generated agent guidance, deployed SWA routing configuration, and compiled shadcn theme tokens for every supported host.
