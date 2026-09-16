@@ -75,6 +75,10 @@ export async function main() {
 
 	const cliArgs = parseCliArgs(argv);
 
+	if (isPcfMode && !cliArgs.pcfDir) {
+		throw new Error("--pcf-dir requires a directory path.");
+	}
+
 	if (cliArgs.pcfDir) {
 		const { pcfDir, shadcnRegistry: _shadcnRegistry, ...rest } = cliArgs;
 		const result = await generatePcfFromExistingWebresource({
@@ -492,11 +496,13 @@ General:
 export function validateProjectName(value: string | undefined): string | undefined {
 	if (value === undefined) return "Project name cannot be empty";
 	if (value.length === 0) return "Project name cannot be empty";
-	if (value.toLocaleLowerCase() !== value)
+	if (value.toLowerCase() !== value)
 		return "Project name must be lowercase";
 	if (/\s/.test(value)) return "Project name cannot contain spaces";
 	if (/[^a-z0-9-_]/.test(value))
 		return "Project name can only contain letters, numbers, hyphens, and underscores";
+	if (!/^[a-z0-9]/.test(value))
+		return "Project name must start with a letter or number";
 	return undefined;
 }
 

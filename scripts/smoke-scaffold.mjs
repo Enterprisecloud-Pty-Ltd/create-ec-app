@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-ec-app-smoke-"));
 const packedPrefix = path.join(tempRoot, "packed-cli");
 // Scaffold through the published tarball, not the repo, so publish-time file
@@ -31,10 +32,10 @@ const matrix = [
 ];
 
 try {
-	execFileSync("npm", ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
+	execFileSync(npmCmd, ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
 
 	const packOutput = execFileSync(
-		"npm",
+		npmCmd,
 		["pack", "--pack-destination", tempRoot],
 		{ cwd: repoRoot, encoding: "utf8" },
 	);
@@ -46,7 +47,7 @@ try {
 		.pop();
 	fs.mkdirSync(packedPrefix, { recursive: true });
 	execFileSync(
-		"npm",
+		npmCmd,
 		[
 			"install",
 			path.join(tempRoot, tarballName),
@@ -309,6 +310,7 @@ try {
 	fs.mkdirSync(guardedProject);
 	fs.writeFileSync(path.join(guardedProject, "keep.txt"), "do not overwrite");
 
+	let guardOutput;
 	try {
 		execFileSync(
 			"node",
@@ -325,14 +327,13 @@ try {
 			],
 			{ cwd: tempRoot, encoding: "utf8", stdio: "pipe" },
 		);
-		throw new Error("Expected existing non-empty project directory to fail");
 	} catch (error) {
-		const output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
-		assert(
-			output.includes("already exists and is not empty"),
-			"Existing non-empty directory fails with a clear error",
-		);
+		guardOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
 	}
+	assert(
+		guardOutput?.includes("already exists and is not empty"),
+		"Existing non-empty directory fails with a clear error",
+	);
 
 	execFileSync(
 		"node",

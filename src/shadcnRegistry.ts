@@ -144,7 +144,13 @@ export function resolveRegistryTargetPath(
 }
 
 export function toRegistryItemUrl(registryUrl: string, itemName: string): string {
-	return new URL(`${encodeURIComponent(itemName)}.json`, registryUrl).toString();
+	const registry = new URL(registryUrl);
+	const itemUrl = new URL(`${encodeURIComponent(itemName)}.json`, registry);
+	// new URL() drops the registry's query; keep it so item fetches match the
+	// {name}.json template written to components.json.
+	itemUrl.search = registry.search;
+	itemUrl.hash = registry.hash;
+	return itemUrl.toString();
 }
 
 export function toRegistryItemUrlTemplate(registryUrl: string): string {
@@ -188,7 +194,7 @@ async function fetchRegistryItem(
 }
 
 async function fetchJson(url: string): Promise<unknown> {
-	const response = await fetch(url);
+	const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
 	if (!response.ok) {
 		throw new Error(
 			`Failed to fetch shadcn registry JSON from ${url}: ${response.status} ${response.statusText}`,
@@ -618,7 +624,7 @@ async function writeRegistryNamespace(
 ): Promise<void> {
 	const componentsPath = path.join(projectDir, "components.json");
 	const componentsJson = (await readJsonIfExists(componentsPath)) as JsonObject;
-	const registries = componentsJson.registries as JsonObject;
+	const registries = (componentsJson.registries ?? {}) as JsonObject;
 	registries[toRegistryNamespace(registryName)] =
 		toRegistryItemUrlTemplate(registryUrl);
 	componentsJson.registries = registries;
@@ -631,7 +637,7 @@ async function mergePackageJson(
 	patch: JsonObject,
 ): Promise<void> {
 	const packagePath = path.join(projectDir, "package.json");
-	const packageJson = (await readJsonIfExists(packagePath)) as JsonObject;
+	const packageJson = ((await readJsonIfExists(packagePath)) ?? {}) as JsonObject;
 	await fs.writeJson(packagePath, mergeJson(packageJson, patch), { spaces: 2 });
 }
 

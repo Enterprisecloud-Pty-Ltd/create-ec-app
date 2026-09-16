@@ -248,6 +248,64 @@ describe("generatePcfFromExistingWebresource", () => {
 		);
 	});
 
+	it("rejects output directories that contain the project even when forced", async () => {
+		const projectDir = await makeBuiltWebresource();
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				output: "..",
+				controlConstructor: "ParentHost",
+				force: true,
+			}),
+		).rejects.toThrow("a directory that contains it");
+
+		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
+			true,
+		);
+	});
+
+	it("rejects values that would corrupt generated XML and JSON", async () => {
+		const projectDir = await makeBuiltWebresource();
+
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				controlConstructor: "Bad-Name",
+			}),
+		).rejects.toThrow('Invalid PCF constructor name "Bad-Name"');
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				namespace: "9bad",
+			}),
+		).rejects.toThrow('Invalid PCF namespace "9bad"');
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				version: "next",
+			}),
+		).rejects.toThrow('Invalid PCF version "next"');
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				packageName: "Bad Name",
+			}),
+		).rejects.toThrow('Invalid PCF package name "Bad Name"');
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				displayName: 'Demo "quoted"',
+			}),
+		).rejects.toThrow("Invalid PCF display name");
+		await expect(
+			generatePcfFromExistingWebresource({
+				pcfDir: projectDir,
+				description: "Renders <App />",
+			}),
+		).rejects.toThrow("Invalid PCF description");
+	});
+
 	it("fails clearly when required webresource files are missing", async () => {
 		const projectDir = await makeTempDir();
 		await fs.outputJson(path.join(projectDir, "package.json"), {

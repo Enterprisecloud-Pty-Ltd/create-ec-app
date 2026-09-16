@@ -4,6 +4,7 @@ import fs from "fs-extra";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scaffoldProject } from "../src/index";
 import {
+	applyCustomShadcnRegistry,
 	normalizeRegistryUrl,
 	parseDependencySpecifier,
 	resolveRegistryTargetPath,
@@ -385,6 +386,38 @@ describe("custom shadcn registry scaffolding", () => {
 		).resolves.toContain('@import "./ec-theme.css";');
 	});
 
+	it("adds the registry namespace when components.json has no registries map", async () => {
+		const rootDir = await makeTempDir();
+		const projectDir = path.join(rootDir, "project");
+		const templateDir = path.join(rootDir, "template");
+		await fs.outputJson(path.join(templateDir, "components.json"), {});
+		await fs.outputFile(
+			path.join(templateDir, "src", "index.patch.css"),
+			'@import "tailwindcss";\n',
+		);
+		const registryUrl = "https://example.com/r/registry.json";
+		mockFetch({
+			[registryUrl]: { name: "EC Registry", items: [{ name: "button" }] },
+			"https://example.com/r/button.json": {
+				name: "button",
+				files: [
+					{
+						path: "src/components/ui/button.tsx",
+						content: "export {}\n",
+					},
+				],
+			},
+		});
+
+		await applyCustomShadcnRegistry({ projectDir, registryUrl, templateDir });
+
+		await expect(
+			fs.readJson(path.join(projectDir, "components.json")),
+		).resolves.toMatchObject({
+			registries: { "@ec-registry": "https://example.com/r/{name}.json" },
+		});
+	});
+
 	it("reports registry fetch and JSON failures", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
@@ -638,6 +671,9 @@ describe("registry helper functions", () => {
 		expect(toRegistryItemUrl("https://example.com/r/registry.json", "button")).toBe(
 			"https://example.com/r/button.json",
 		);
+		expect(
+			toRegistryItemUrl("https://example.com/r/registry.json?version=1", "button"),
+		).toBe("https://example.com/r/button.json?version=1");
 		expect(
 			toRegistryItemUrlTemplate("https://example.com/r/registry.json?version=1"),
 		).toBe("https://example.com/r/{name}.json?version=1");

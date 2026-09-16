@@ -70,9 +70,15 @@ export async function generatePcfFromExistingWebresource(
 		projectDir,
 		options.output ?? path.join("pcf", constructorName),
 	);
-	if (outputDir === projectDir) {
+	// An ancestor output directory would delete the project itself when removed.
+	const projectFromOutput = path.relative(outputDir, projectDir);
+	if (
+		projectFromOutput === "" ||
+		(!projectFromOutput.startsWith("..") &&
+			!path.isAbsolute(projectFromOutput))
+	) {
 		throw new Error(
-			"PCF output directory cannot be the webresource project root. Choose a subdirectory such as --output pcf/MyControl.",
+			"PCF output directory cannot be the webresource project root or a directory that contains it. Choose a subdirectory such as --output pcf/MyControl.",
 		);
 	}
 	const templateDir = path.resolve(
@@ -87,6 +93,16 @@ export async function generatePcfFromExistingWebresource(
 		`PCF wrapper that renders the ${displayName} React app directly inside a PCF control.`;
 	const packageNameToken =
 		options.packageName ?? toKebabCase(constructorName);
+
+	validatePcfOptions({
+		constructorName,
+		description: controlDescription,
+		displayName: controlDisplayName,
+		namespace,
+		packageName: packageNameToken,
+		version,
+	});
+	await assertRemovablePcfOutput(outputDir, options.force ?? false);
 
 	const relToProject = toPosixPath(path.relative(outputDir, projectDir));
 	const appImportPath = ensureRelativeImport(
@@ -127,7 +143,6 @@ export async function generatePcfFromExistingWebresource(
 		constructorName,
 	);
 
-	await assertRemovablePcfOutput(outputDir, options.force ?? false);
 	await fs.remove(outputDir);
 	await applyLayer(templateDir, outputDir);
 	for (const layerDir of layerDirs) {
@@ -164,6 +179,56 @@ export async function generatePcfFromExistingWebresource(
 		outputDir,
 		templateDir,
 	};
+}
+
+// Tokens land in XML attributes, resx values, JSON strings, and TypeScript
+// identifiers, so reject values that would corrupt the generated control.
+function validatePcfOptions(values: {
+	constructorName: string;
+	description: string;
+	displayName: string;
+	namespace: string;
+	packageName: string;
+	version: string;
+}): void {
+	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(values.constructorName)) {
+		throw new Error(
+			`Invalid PCF constructor name "${values.constructorName}". Use a class name with letters, digits, and underscores.`,
+		);
+	}
+
+	if (!/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*$/.test(values.namespace)) {
+		throw new Error(
+			`Invalid PCF namespace "${values.namespace}". Use dot-separated identifiers such as EC or EC.Controls.`,
+		);
+	}
+
+	if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(values.version)) {
+		throw new Error(
+			`Invalid PCF version "${values.version}". Use a semver value such as 1.0.0.`,
+		);
+	}
+
+	if (
+		!/^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(
+			values.packageName,
+		)
+	) {
+		throw new Error(
+			`Invalid PCF package name "${values.packageName}". Use a lowercase npm package name.`,
+		);
+	}
+
+	for (const [label, value] of [
+		["display name", values.displayName],
+		["description", values.description],
+	] as const) {
+		if (/[<>&"\\\p{Cc}]/u.test(value)) {
+			throw new Error(
+				`Invalid PCF ${label} "${value}". It cannot contain <, >, &, ", backslashes, or control characters because it is embedded in generated XML and JSON files.`,
+			);
+		}
+	}
 }
 
 // Generated PCF controls always carry the template manifest, so its presence is

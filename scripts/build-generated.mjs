@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
 const cliPath = path.join(repoRoot, "dist", "index.js");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-ec-app-build-"));
 let keepTemp = false;
@@ -23,7 +24,7 @@ const matrix = [
 ];
 
 try {
-	execFileSync("npm", ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
+	execFileSync(npmCmd, ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
 
 	for (const [target, ui] of matrix) {
 		const projectName = `${target}-${ui}`;
@@ -45,17 +46,17 @@ try {
 				],
 				{ cwd: tempRoot, stdio: "inherit" },
 			);
-			execFileSync("npm", ["install"], { cwd: projectDir, stdio: "inherit" });
-			execFileSync("npm", ["run", "build"], { cwd: projectDir, stdio: "inherit" });
-			execFileSync("npm", ["run", "lint"], { cwd: projectDir, stdio: "inherit" });
-			execFileSync("npm", ["ls", "typescript", "@typescript/native"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync(npmCmd, ["install"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync(npmCmd, ["run", "build"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync(npmCmd, ["run", "lint"], { cwd: projectDir, stdio: "inherit" });
+			execFileSync(npmCmd, ["ls", "typescript", "@typescript/native"], { cwd: projectDir, stdio: "inherit" });
 			if (target === "webresource") {
 				const pcfDir = path.join(tempRoot, `pcf-${ui}`);
 				execFileSync(process.execPath, [cliPath, "--pcf-dir", projectDir,
 					"--output", pcfDir, "--namespace", "EC", "--constructor", "BuildCheck"],
 					{ cwd: projectDir, stdio: "inherit" });
-				execFileSync("npm", ["ci"], { cwd: pcfDir, stdio: "inherit" });
-				execFileSync("npm", ["run", "build"], { cwd: pcfDir, stdio: "inherit" });
+				execFileSync(npmCmd, ["ci"], { cwd: pcfDir, stdio: "inherit" });
+				execFileSync(npmCmd, ["run", "build"], { cwd: pcfDir, stdio: "inherit" });
 				execFileSync(process.execPath, [path.join(repoRoot, "scripts/check-generated-css-scope.mjs"), pcfDir],
 					{ cwd: repoRoot, stdio: "inherit" });
 				if (ui === "shadcn-ui") {

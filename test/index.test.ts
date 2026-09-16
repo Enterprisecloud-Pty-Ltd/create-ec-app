@@ -180,6 +180,12 @@ describe("CLI helper functions", () => {
 		expect(validateProjectName("bad!")).toBe(
 			"Project name can only contain letters, numbers, hyphens, and underscores",
 		);
+		expect(validateProjectName("_bad")).toBe(
+			"Project name must start with a letter or number",
+		);
+		expect(validateProjectName("-bad")).toBe(
+			"Project name must start with a letter or number",
+		);
 		expect(validateProjectName("good-name_1")).toBeUndefined();
 		expect(isAppTarget("portal")).toBe(true);
 		expect(isAppTarget("bad")).toBe(false);
@@ -684,6 +690,12 @@ describe("main", () => {
 		await expect(
 			fs.pathExists(path.join(rootDir, "main-demo", ".git")),
 		).resolves.toBe(false);
+	});
+
+	it("rejects a --pcf-dir flag without a directory value", async () => {
+		process.argv = ["node", "create-ec-app", "--pcf-dir"];
+
+		await expect(main()).rejects.toThrow("--pcf-dir requires a directory path");
 	});
 
 	it("runs the PCF generation path", async () => {

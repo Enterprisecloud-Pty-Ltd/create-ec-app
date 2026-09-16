@@ -16,7 +16,7 @@ const KEEP_TEMP = process.argv.includes("--keep-temp");
 const SHADCN_UTILS_TEMPLATE = `export { cn } from "cn";\n`;
 const FALLBACK_DEPENDENCY_VERSIONS: Record<string, string> = {
 	"class-variance-authority": "0.7.1",
-	cn: "0.2.5",
+	cn: "0.2.6",
 	"lucide-react": "1.41.0",
 	"radix-ui": "1.6.7",
 	shadcn: SHADCN_CLI_VERSION,
@@ -96,9 +96,9 @@ async function ensureShadcnTailwindImport(projectDir: string): Promise<void> {
 	const importLine = '@import "shadcn/tailwind.css";';
 	const updated = source.includes('@import "tailwindcss";')
 		? source.replace(
-				'@import "tailwindcss";',
-				`@import "tailwindcss";\n${importLine}`,
-			)
+			'@import "tailwindcss";',
+			`@import "tailwindcss";\n${importLine}`,
+		)
 		: `${importLine}\n${source}`;
 
 	await fs.writeFile(cssPath, updated, "utf8");

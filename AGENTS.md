@@ -65,3 +65,12 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - `portal` scaffolds with an explicit work-in-progress warning. PCF generation refuses to remove a non-empty output directory that lacks the generated-control marker unless `--force` is passed. `create-ec-app --version`/`-v` prints the CLI version; in PCF mode `--version` remains the control version.
 - The npm package no longer ships `scripts/` or a nonexistent `bin/`. The scaffold smoke test now packs the tarball, installs it, and scaffolds through the installed CLI, asserting `.gitignore` contents, lockfile absence, and the package name — closing the gap that let publish-time stripping go unnoticed.
 - Verified with `npm run check` (104 tests, 100% coverage), `npm run smoke:scaffold` through the packed tarball, and `npm run build:generated` (all eight generated apps and both PCF wrappers).
+
+### 2026-09-16 - Review follow-up: PCF output safety and input validation
+
+- PCF `--output` may no longer be the webresource root or a directory containing it; with `--force` an ancestor path would have deleted the entire parent tree, including the project itself. Output removability and option validation now run before the project is mutated (`src/runtime/*`, portal rewrites).
+- PCF constructor, namespace, version, package name, display name, and description are validated before generation: constructor/namespace as identifiers, version as semver, package name as an npm name, and display name/description free of characters that corrupt the generated manifest, resx, or package.json (`<`, `>`, `&`, `"`, backslashes, control characters).
+- `--pcf-dir` without a value now fails with a clear error instead of silently dropping into the scaffold prompts. Registry item fetches preserve the registry URL's query and hash (matching the `{name}.json` template written to components.json), use a 30-second timeout, and tolerate a `components.json` without a `registries` map or a missing `package.json`.
+- Project names must start with a letter or number, matching npm package-name rules.
+- `refresh-shadcn-template.ts` fallback `cn` version aligned to 0.2.6 with the 2026-09-15 grammar patch. Dev scripts spawn `npm.cmd` on Windows, and the smoke test's expected-failure check no longer masks spawn errors.
+- Verified with `npm run check` (108 tests, 100% coverage) and `npm run smoke:scaffold` through the packed tarball.
