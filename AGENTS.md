@@ -99,3 +99,9 @@ Add a dated entry for material tooling or agent-workflow changes. Record what ch
 - Added a non-interactive agent workflow and a target table. Clarified that `portal` currently applies only the shared base and selected UI, without SWA configuration or host agent guidance; `swa` is the implemented target for an SWA-hosted portal.
 - Corrected PCF source/output terminology in the repository and generated webresource READMEs. Used runnable example names, documented source mutations, and clarified that wrapper regeneration examples must preserve custom output locations and control versions.
 - Verified repository links, packed package contents, scaffold smoke checks, and a PCF documentation fixture with a custom output path and version. No runtime behavior changed, so the full dependency/build matrix was not repeated locally.
+
+### 2026-09-16 - Portal broker architecture clarification
+
+- Recorded the intended portal contract: SWA with Entra authentication, a linked Function App broker, and Dataverse application-user access. The portal reuses the SWA frontend but is a separate target because it adds backend authorization and configuration.
+- Replaced the alias recommendation with the intended architecture and explicit completion criteria in `docs/portal.md`. Documented the trusted identity boundary and separated application-user authentication from end-user licensing entitlement.
+- This records the intended design; the Function App broker remains unimplemented in the current generator.

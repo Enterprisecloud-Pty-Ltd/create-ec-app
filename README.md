@@ -25,12 +25,12 @@ UI layers are `shadcn-ui` and `kendo`.
 | Target | Hosting and generated guidance |
 |---|---|
 | `webresource` | Dynamics webresource, with host-specific `AGENTS.md`; can generate a separate PCF wrapper. |
-| `swa` | Azure Static Web Apps, with routing/deployment configuration and host-specific `AGENTS.md`. Use this for a portal hosted on SWA. |
+| `swa` | Azure Static Web Apps, with routing/deployment configuration and host-specific `AGENTS.md`. Provides the frontend hosting baseline. |
 | `power-pages` | Microsoft Power Pages code site, with site-session guidance and host-specific `AGENTS.md`. |
 | `code-apps` | Power Apps Code App, with SDK configuration and host-specific `AGENTS.md`. |
 | `portal` | WIP placeholder: shared React/Vite base plus the chosen UI layer only. It does not inherit `swa`, provide SWA configuration, or generate `AGENTS.md`/`CLAUDE.md`. |
 
-The `portal` target needs an implemented host contract and target tests before it can be called complete. If it is intended to mean an SWA-hosted portal, it can reuse `swa` through a supported alias. Authentication, roles, and backend requirements remain application-specific.
+The intended `portal` target is an SWA frontend with Microsoft Entra sign-in and an Azure Function App broker that accesses Dataverse using a service principal/application user. It should reuse the SWA frontend layer and add the broker, configuration, host guidance, and tests. This backend contract makes it a separate target. The current placeholder does not implement that contract; see [the portal target contract](docs/portal.md).
 
 ## Agent workflow
 
