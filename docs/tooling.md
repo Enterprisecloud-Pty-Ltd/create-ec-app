@@ -1,6 +1,6 @@
 # Tooling and maintenance
 
-The generated apps use TypeScript **7.0.2** and Oxlint **1.81.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
+The generated apps use TypeScript **7.0.2** and Oxlint **1.83.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
 
 The CLI uses `typescript@7.0.2` directly; its editor settings select `node_modules/typescript`. The generated apps use the compatibility aliases described below. App-specific instructions are shipped from [templates/base/docs/tooling.md](../templates/base/docs/tooling.md).
 
@@ -28,7 +28,7 @@ If using another editor, select the local TypeScript 7 language server and Oxlin
 
 ## Why there are two TypeScript packages
 
-`@typescript/native` is an npm alias for stable `typescript@7.0.2`; it provides the `tsc` command used by builds. `typescript` is an alias for Microsoft's `@typescript/typescript6@6.0.3` compatibility package; it provides the older JavaScript API required by TanStack's lint dependencies and a separate `tsc6` command. Application compilation uses **7**, not the compatibility compiler.
+`@typescript/native` is an npm alias for stable `typescript@7.0.2`; it provides the `tsc` command used by builds. `typescript` is an alias for Microsoft's `@typescript/typescript6@6.0.2` compatibility package; it provides the older JavaScript API required by TanStack's lint dependencies and a separate `tsc6` command. Application compilation uses **7**, not the compatibility compiler.
 
 This follows [Microsoft's side-by-side installation guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60). It avoids forced peer resolution. Check the setup with `npx tsc --version` and `npm ls typescript @typescript/native`.
 
@@ -51,9 +51,19 @@ Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded fr
 
 ## PCF exception
 
-Generated PCF wrappers retain **TypeScript 5.9** and Microsoft's `pcf-scripts` build/lint tooling. Their webpack/ts-loader integration needs the older TypeScript API. Keep that compiler separate until the PCF toolchain explicitly supports TypeScript 7. Open the PCF directory separately in VS Code to use its supplied legacy TypeScript settings. Rebuild the webresource and regenerate its PCF wrapper whenever shared source or CSS changes.
+Generated PCF wrappers retain **TypeScript 5.9** and Microsoft's `pcf-scripts` build/lint tooling. Their webpack/ts-loader integration needs the older TypeScript API. Keep that compiler separate until the PCF toolchain explicitly supports TypeScript 7. Generated PCF `build` and `lint` commands use `scripts/run-pcf.mjs` to require explicit task success: `pcf-scripts` 1.51.1 was observed returning zero after webpack failed. Reassess the guard when an upstream release propagates failures reliably. Open the PCF directory separately in VS Code and select its supplied legacy TypeScript settings. Rebuild the webresource and regenerate its PCF wrapper whenever shared source or CSS changes. Automatic regeneration requires the generator-owned `create-ec-app.pcf.json` marker. An older wrapper without the marker needs a reviewed, one-time `--force`; ordinary PCF manifests are deliberately not treated as proof that recursive replacement is safe.
+
+## SWA CLI exception and install scripts
+
+Azure Static Web Apps CLI 2.0.10 is the latest stable release as of 2026-09-16. Its published dependencies still resolve `adm-zip@0.5.18` and `devcert@1.2.3` with `tmp@0.0.33`, which npm reports under four advisories. `npm audit fix --force` proposes downgrading the CLI to 1.1.3; do not use that downgrade or add transitive overrides. Recheck when Microsoft releases a newer stable CLI whose dependency tree removes these advisories.
+
+On Node 26, SWA CLI 2.0.10 also emits `DEP0187` from its `start.ts` call to `fs.existsSync`; the emulator still starts and serves routing configuration. Recheck this warning with the next SWA CLI release.
+
+npm 11 blocks unreviewed dependency install scripts. Generated SWA apps approve `keytar@7.9.0`, which installs the native operating-system credential-store binding used by Azure authentication. Generated Kendo apps approve `@progress/kendo-licensing@1.11.3`, whose postinstall runs Telerik's license activation with `--ignore-no-license`. These approvals are exact-version entries in `allowScripts`; review and update them with the corresponding dependency instead of approving future versions broadly.
 
 ## Repository checks and handover record
+
+Read [handover.md](handover.md) for the current compatibility decisions, upstream advisory exceptions, final verification gates, and account-owner actions.
 
 Run from the `create-ec-app` repository root:
 
@@ -64,7 +74,9 @@ npm run smoke:scaffold
 npm run build:generated
 ```
 
-`check` includes CLI typechecking, lint, and unit coverage. `build:generated` checks four targets with both UI libraries, valid TypeScript dependency trees, both PCF wrappers, CSS scoping, and negative/positive lint fixtures. CI is configured for Node 22 and 26; merging a release-producing commit to `main` can publish to npm.
+`check` includes CLI typechecking, lint, and unit coverage. `build:generated` installs the packed npm artifact and checks four targets with both UI libraries. Each app gets a fresh install followed by `npm ci`, a production build, lint with zero warnings, and a TypeScript dependency-tree check. The matrix also verifies agent guidance, the deployed SWA routing config, both PCF wrappers with explicit lint and CSS scoping checks, and negative/positive lint fixtures. It rebuilds and lints webresources after PCF conversion; the corrected lint fixture must also compile. CI is configured for Node 22 and 26; merging a release-producing commit to `main` can publish to npm.
+
+Run the smoke and generated-build scripts through the npm commands above. They use npm's `npm_execpath` entrypoint with the current Node executable, which avoids executing `npm.cmd` directly on Windows. The generated matrix uses numeric webresource project names and inferred PCF constructors to verify that naming path with both UI libraries.
 
 The 2026-09-05 local validation used Node 26.8.1: 85 unit tests passed with 100% coverage, all eight app builds/lints passed, and both PCF wrappers and CSS checks passed. Dependency lifecycle scripts were disabled for that local run; Kendo license activation and live Microsoft-hosted deployments were not verified. This is a dated baseline, not evidence for a future upgrade.
 

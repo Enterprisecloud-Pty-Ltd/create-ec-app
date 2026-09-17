@@ -8,14 +8,14 @@ Treat it as a static Azure-hosted SPA. Keep it small, readable, and easy to depl
 
 - Keep Static Web Apps hosting, local Vite development, and SPA routing fallback working.
 - Keep the app client-side unless an Azure Functions API already exists or is explicitly requested.
-- Do not add Dynamics `Xrm`, `token.json`, Power Pages ADAL, or Power Apps code app SDK patterns unless the target changes.
+- Do not add Dynamics `Xrm`, `token.json`, Power Pages session authentication, or Power Apps code app SDK patterns unless the target changes.
 - Make surgical changes unless the task is implementing a Figma screen.
 
 ## Runtime
 
 ### Static Web Apps-hosted
 
-- Build output is served from `dist`. Preserve `staticwebapp.config.json`.
+- Build output is served from `dist`. Preserve `public/staticwebapp.config.json`; Vite copies it to `dist/staticwebapp.config.json`.
 - Keep `navigationFallback` when the app uses client-side routing.
 - Use `staticwebapp.config.json` for SWA routes, auth, headers, response overrides, and fallback rules.
 - Do not add deprecated `routes.json`.
@@ -30,16 +30,18 @@ Treat it as a static Azure-hosted SPA. Keep it small, readable, and easy to depl
 
 | File | Rule |
 |---|---|
-| `staticwebapp.config.json` | Routing, auth, and SPA fallback boundary. |
+| `public/staticwebapp.config.json` | Source for the routing, auth, and SPA fallback configuration copied into `dist`. |
 | `swa-cli.config.json` | Keep `appDevserverUrl`, build command, and output location accurate. |
 | `vite.config.ts` | Preserve React, Tailwind, alias, and existing build assumptions. |
 | `src/main.tsx` | Preserve bootstrap, providers, and global theme/style imports. |
 | `package.json` | Keep SWA CLI scripts and dependencies only if the project uses them. |
 | `api/` | Only add or change when the app has a Static Web Apps API requirement. |
 
-Keep `staticwebapp.config.json` `navigationFallback` aligned with client-side routes.
+Keep `public/staticwebapp.config.json` `navigationFallback` aligned with client-side routes. Verify the build copies it to `dist/staticwebapp.config.json`.
 
 Do not replace Vite, add SSR, add Next.js, or introduce backend coupling unless asked. If the build flow changes, verify the SWA config still reaches `dist`.
+
+The pinned SWA CLI 2.0.10 still resolves known advisories through `adm-zip` and `devcert`/`tmp`; npm's automatic fix proposes an unsupported downgrade to 1.1.3. Recheck the released SWA CLI before changing or overriding those transitive packages. Its `keytar` install script is approved at the reviewed 7.9.0 version so Azure credentials can use the operating-system credential store.
 
 ## Data access
 
@@ -59,4 +61,4 @@ Prefer direct calls to the app's own API or public endpoints.
 There is no host chrome. The Figma frame is the app.
 
 <!-- checks-extra -->
-- SWA CLI smoke test when `staticwebapp.config.json` or `/api` routing changes
+- Vite build and SWA CLI smoke test when `public/staticwebapp.config.json` or `/api` routing changes

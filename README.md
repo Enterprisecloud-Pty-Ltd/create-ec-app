@@ -20,7 +20,38 @@ Node 26 is supported alongside Node 22. CI checks both versions, including the g
 
 See the shared [tooling and handover guide](docs/tooling.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
 
-Targets include `webresource`, `portal`, `power-pages`, `swa`, and `code-apps`. UI layers include `shadcn-ui` and `kendo`.
+UI layers are `shadcn-ui` and `kendo`.
+
+| Target | Hosting and generated guidance |
+|---|---|
+| `webresource` | Dynamics webresource, with host-specific `AGENTS.md`; can generate a separate PCF wrapper. |
+| `swa` | Azure Static Web Apps, with routing/deployment configuration and host-specific `AGENTS.md`. Provides the frontend hosting baseline. |
+| `power-pages` | Microsoft Power Pages code site, with site-session guidance and host-specific `AGENTS.md`. |
+| `code-apps` | Power Apps Code App, with SDK configuration and host-specific `AGENTS.md`. |
+| `portal` | WIP placeholder: shared React/Vite base plus the chosen UI layer only. It does not inherit `swa`, provide SWA configuration, or generate `AGENTS.md`/`CLAUDE.md`. |
+
+The intended `portal` target is an SWA frontend with Microsoft Entra sign-in and an Azure Function App broker that accesses Dataverse using a service principal/application user. It should reuse the SWA frontend layer and add the broker, configuration, host guidance, and tests. This backend contract makes it a separate target. The current placeholder does not implement that contract; see [the portal target contract](docs/portal.md).
+
+## Agent workflow
+
+Start with `npx --yes create-ec-app@latest --help`. Running the CLI without scaffold options starts interactive prompts. Agents should provide the project name, target, UI library, and installation choice explicitly:
+
+```bash
+npx --yes create-ec-app@latest --project-name my-swa --target swa --ui shadcn-ui --no-install --skip-git
+cd my-swa
+```
+
+Read the generated `AGENTS.md`, `README.md`, and `docs/tooling.md` before editing, then install and verify:
+
+```bash
+npm install
+npm run check
+npm run build
+```
+
+Use Node 22.14 or newer within Node 22, or use Node 26; both lines are covered by CI. Commit the newly generated lockfile and use `npm ci` for later installs. `--skip-git` leaves repository initialization to the caller. Power Pages uses `--target power-pages`; `portal` is not an alias for Power Pages or SWA.
+
+`@latest` selects the published npm release. An unmerged branch or pull request does not change the version installed by that command.
 
 Quick shadcn creates with dependency install:
 
@@ -35,6 +66,7 @@ Useful CLI flags:
 
 - `--force`: overwrite an existing non-empty project directory.
 - `--skip-git`: skip `git init`, `git add .`, and the initial commit.
+- `--version` / `-v`: print the CLI version and exit.
 - `--help` / `-h`: print usage and exit without prompting.
 
 By default, existing non-empty project directories fail with a clear error. Existing empty directories are reused. Git initialization still runs by default unless `--skip-git` is passed.
@@ -145,6 +177,10 @@ bash update-templates.sh
 
 The script updates compatible minor dependency ranges and lockfiles, stops on errors, and avoids installing template `node_modules`. It preserves the TypeScript/compiler-engine pins and leaves the shadcn snapshot to `npm run refresh:shadcn-template`, which updates source and dependencies together. Review compiler and engine upgrades manually using the [tooling guide](docs/tooling.md).
 
+Generated apps do not ship the base template's `package-lock.json`: target and UI layers change the dependency set, so the template lockfile would be stale and break `npm ci`. The first `npm install` inside the generated app creates the real lockfile to commit.
+
+Template `.gitignore` files are stored as `gitignore` (npm strips dotfiles named `.gitignore` when packing) and renamed to `.gitignore` while layering. Target-and-UI-specific file overrides live in `templates/combinations/<target>-<ui>` and apply after the target and UI layers.
+
 ## Generate a PCF Control
 
 If you want to host the React webresource inside a PCF control instead of loading the HTML webresource directly in an iframe, use `create-ec-app` itself to generate the wrapper for an existing webresource project.
@@ -162,27 +198,27 @@ npm run build
 ```bash
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/{{ControlName}} \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor {{ControlName}} \
-  --display-name "Control Name"
+  --constructor MyControlHost \
+  --display-name "My Control Host"
 ```
 
 3. Install dependencies inside that generated PCF directory:
 
 ```bash
-cd ./pcf/{{ControlName}}
+cd ./pcf/MyControlHost
 npm install
 npm run build
 ```
 
-This writes a standalone PCF project to the `--pcf-dir` folder. The generated control:
+This writes a standalone PCF project to `--output`. `--pcf-dir` identifies the source webresource; a relative `--output` is resolved from that source directory. If `--output` is omitted, the wrapper is generated under `pcf/<ConstructorName>` in the source project. The generated control:
 
 - imports `src/App.tsx` directly instead of wrapping built HTML in an iframe
 - creates and imports `pcf-scoped.css` from the built `dist/main.css`
 - scopes every non-keyframe CSS selector under the generated PCF host selector
 - creates `src/runtime/types.ts` only if that file does not already exist
-- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell, following the `PcfBase` pattern
+- provides a runtime object with record context and `context.webAPI` access inside the generated PCF shell
 - mounts your React app directly into the PCF container
 
 Regenerate after app code or CSS changes by running the same sequence again from the webresource root:
@@ -191,29 +227,31 @@ Regenerate after app code or CSS changes by running the same sequence again from
 npm run build
 npx create-ec-app@latest \
   --pcf-dir . \
-  --output ./pcf/FusionNotebookHost \
+  --output ./pcf/MyControlHost \
   --namespace EC \
-  --constructor FusionNotebookHost \
-  --display-name "Fusion Notebook Host"
-cd pcf/FusionNotebookHost
+  --constructor MyControlHost \
+  --display-name "My Control Host"
+cd pcf/MyControlHost
 npm install
 npm run build
 ```
 
-Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes.
+Regeneration removes and recreates the PCF output folder, so keep durable app code in `src` and use generator templates or layers for repeatable PCF-specific changes. New wrappers contain `create-ec-app.pcf.json`, which proves generator ownership and permits automatic regeneration. Wrappers created before this marker was introduced require `--force` once; review the target first, because an unmarked PCF project may contain hand-maintained work. Later regenerations recognize the marker automatically.
+
+The output cannot be the source project or a directory containing it, including paths through symlinks or junctions. Constructor names use letters and digits and must start with a letter. Namespace segments follow the same rule and may be separated by dots, such as `EC.Controls`. When `--constructor` is omitted, numeric project names receive an `App` prefix: `360-dashboard` becomes `App360DashboardHost`. Versions use numeric `major.minor.patch` values without leading zeros, prerelease labels, or build metadata so they work in both npm and the PCF manifest.
 
 What gets generated:
 
-- a minimal PCF wrapper project under `pcf/<ConstructorName>`
+- a minimal PCF wrapper project at `--output`, defaulting to `pcf/<ConstructorName>` in the source project
 - a checked-in PCF shell stamped out from `create-ec-app/templates/pcf/base`
 - direct imports back to your webresource source
 - a generated `pcf-scoped.css` file with CSS selectors scoped to the PCF control
 
-What does not happen:
+Source and deployment boundaries:
 
-- your existing webresource project is not converted in place
-- your React source is not moved into the PCF project
-- the generated PCF project does not automatically get added to a Dataverse solution
+- The source webresource remains a separate runnable app. Generation adds runtime files and can rewrite shadcn portal components in its source.
+- React source stays in the webresource project and is imported by the wrapper.
+- Add the generated PCF project to a Dataverse solution separately; generation does not deploy it.
 
 ## Verification
 
@@ -227,7 +265,7 @@ npm run build:generated
 node scripts/check-generated-css-scope.mjs <generated-pcf-control-path>
 ```
 
-`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, scaffolds the target/UI matrix with `--no-install --skip-git`, and checks the generated file shape. `npm run build:generated` installs, builds, and lints all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds both PCF wrappers outside their source projects, checks CSS isolation, verifies the TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus their corrected counterpart. Both CI jobs must pass before automatic release.
+`npm test` runs Vitest with coverage across all `src/**/*.ts` files and enforces 100% statement, branch, function, and line coverage. `npm run smoke:scaffold` builds the CLI, packs the npm tarball, installs it, and scaffolds the target/UI matrix through the installed package with `--no-install --skip-git`, checking the generated file shape including `.gitignore` contents — so publish-time file stripping is caught locally. `npm run build:generated` installs the packed CLI, scaffolds fresh apps, verifies `npm ci` from their new lockfiles, builds, and lints with zero warnings across all eight combinations of Webresource, Power Pages, SWA, and Code Apps with Kendo and shadcn. It also builds and lints both PCF wrappers outside their source projects, rebuilds the converted source apps, checks agent guidance and CSS isolation, verifies the deployed SWA configuration and TypeScript dependency tree, and tests thirteen deliberately broken lint examples plus a compiled, lint-clean counterpart. Both CI jobs must pass before automatic release.
 
 Run `npm run check` for the CLI's typecheck, Oxlint, and unit tests. VS Code recommendations and settings are supplied for the CLI and generated apps.
 

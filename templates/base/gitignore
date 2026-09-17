@@ -64,9 +64,8 @@ jspm_packages/
 .nuxt
 dist
 
-# Gatsby files
+# Cache
 .cache/
-public
 
 # Storybook build outputs
 .out

@@ -8,7 +8,7 @@ Treat it as a Power Apps-hosted code app, not a Dynamics web resource. Keep it s
 
 - Keep Power Apps code app hosting, local Play support, and generated connector/Dataverse service access working.
 - Keep the app client-side.
-- Do not add Dynamics `Xrm`, `token.json`, Power Pages ADAL, Static Web Apps routing, or direct Dataverse Web API auth patterns unless the target changes.
+- Do not add Dynamics `Xrm`, `token.json`, Power Pages session authentication, Static Web Apps routing, or direct Dataverse Web API auth patterns unless the target changes.
 - Make surgical changes unless the task is implementing a Figma screen.
 
 ## Runtime
@@ -27,7 +27,7 @@ Treat it as a Power Apps-hosted code app, not a Dynamics web resource. Keep it s
 - Use the same browser profile as the target Power Platform tenant.
 - Run `npx power-apps init` before real push or data-source work.
 - Treat `power.config.example.json` as documentation only; do not rename it to bypass initialization.
-- Do not mix this with webresource `AuthService.ts`, `token.json`, or Power Pages `AuthContext`.
+- Do not mix this with webresource `AuthService.ts`, `token.json`, or Power Pages hosted-session patterns.
 
 | File | Rule |
 |---|---|

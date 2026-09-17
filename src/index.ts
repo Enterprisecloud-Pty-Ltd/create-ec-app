@@ -65,7 +65,19 @@ export async function main() {
 		process.exit(0);
 	}
 
+	const isPcfMode = argv.some(
+		(arg) => arg === "--pcf-dir" || arg.startsWith("--pcf-dir="),
+	);
+	if ((argv.includes("--version") || argv.includes("-v")) && !isPcfMode) {
+		printVersion();
+		process.exit(0);
+	}
+
 	const cliArgs = parseCliArgs(argv);
+
+	if (isPcfMode && !cliArgs.pcfDir) {
+		throw new Error("--pcf-dir requires a directory path.");
+	}
 
 	if (cliArgs.pcfDir) {
 		const { pcfDir, shadcnRegistry: _shadcnRegistry, ...rest } = cliArgs;
@@ -158,7 +170,13 @@ export async function scaffoldProject({
 	const uiDir = path.join(templatesRoot, "ui", uiType);
 
 	await assertCanCreateProjectDir(projectDir, force);
-	await fs.copy(baseDir, projectDir);
+	await applyLayer(baseDir, projectDir);
+
+	if (target === "portal") {
+		log.warn(
+			"The portal target is a work in progress: it scaffolds the base template without target files or generated AGENTS.md guidance.",
+		);
+	}
 
 	if (fs.existsSync(targetDir)) {
 		await applyLayer(targetDir, projectDir);
@@ -176,21 +194,27 @@ export async function scaffoldProject({
 		await applyLayer(uiDir, projectDir);
 	}
 
+	const combinationDir = path.join(
+		templatesRoot,
+		"combinations",
+		`${target}-${uiType}`,
+	);
+	if (fs.existsSync(combinationDir)) {
+		await applyLayer(combinationDir, projectDir);
+	}
+
 	if (target === "code-apps") {
 		await cleanupCodeAppsScaffold(projectDir);
 	}
+
+	//INFO: The base lockfile predates dependency merges from layers, so it is stale for every generated app. The first npm install creates the real one.
+	await fs.remove(path.join(projectDir, "package-lock.json"));
 
 	await replaceTokensRecursively(projectDir, {
 		APP_NAME: projectName,
 		TARGET: target,
 		UI: uiType,
 	});
-
-	//WARN: This is a special case fix for having AuthContext in Kendo for Power Pages
-	if (target === "power-pages" && uiType === "kendo") {
-		const mainTsxPath = path.join(projectDir, "src", "main.tsx");
-		await fs.writeFile(mainTsxPath, POWER_PAGES_KENDO_MAIN_TSX, "utf-8");
-	}
 
 	if (install) {
 		const s = spinner();
@@ -285,6 +309,17 @@ async function removeDirIfEmpty(dirPath: string): Promise<void> {
 	}
 }
 
+function exitIfCancelled<T>(
+	promptValue: T,
+): asserts promptValue is Exclude<T, symbol> {
+	if (!isCancel(promptValue)) {
+		return;
+	}
+
+	cancel("Operation cancelled.");
+	process.exit(0);
+}
+
 export function runCliEntrypoint(
 	isEntryPoint = isMainModule(),
 	runMain: () => Promise<void> = main,
@@ -308,10 +343,7 @@ async function promptProjectName(): Promise<string> {
 		validate: validateProjectName,
 	});
 
-	if (isCancel(name)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(name);
 
 	return String(name).trim();
 }
@@ -328,10 +360,7 @@ async function promptTarget(): Promise<AppTarget> {
 		],
 	});
 
-	if (isCancel(target)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(target);
 
 	return target;
 }
@@ -356,10 +385,7 @@ async function promptUiOptions(
 		],
 	});
 
-	if (isCancel(selection)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(selection);
 
 	if (selection === "shadcn-registry") {
 		return {
@@ -379,10 +405,7 @@ async function promptShadcnRegistryUrl(): Promise<string> {
 		validate: validateShadcnRegistryUrl,
 	});
 
-	if (isCancel(registryUrl)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(registryUrl);
 
 	return String(registryUrl).trim();
 }
@@ -396,12 +419,18 @@ async function promptInstallDependencies(): Promise<boolean> {
 		],
 	});
 
-	if (isCancel(shouldRunNpmInstall)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
+	exitIfCancelled(shouldRunNpmInstall);
 
 	return shouldRunNpmInstall.run;
+}
+
+export function printVersion(
+	packageJsonPath = path.join(__dirname, "..", "package.json"),
+): void {
+	const packageJson = fs.readJsonSync(packageJsonPath) as {
+		version?: string;
+	};
+	console.log(packageJson.version ?? "unknown");
 }
 
 export function printHelp(): void {
@@ -439,6 +468,7 @@ Scaffold options:
   --no-install                     Skip npm install
   --force                          Overwrite an existing non-empty project directory
   --skip-git                       Skip git init, add, and initial commit
+  --version, -v                    Print the create-ec-app version
 
 PCF wrapper options:
   --pcf-dir <dir>                  Existing webresource app directory
@@ -447,11 +477,12 @@ PCF wrapper options:
   --constructor <name>             PCF control constructor name
   --display-name <name>            PCF display name
   --description <text>             PCF description
-  --version <version>              PCF version
+  --version <version>              PCF control version
   --template <dir>                 PCF template directory
   --layer <dir>                    Extra PCF template layer; repeatable
   --dist <dir>                     Built webresource output directory
   --package-name <name>            PCF package name
+  --force                          Overwrite a non-empty output directory that is not a generated PCF control
 
 General:
   --help, -h                       Show this help
@@ -461,11 +492,13 @@ General:
 export function validateProjectName(value: string | undefined): string | undefined {
 	if (value === undefined) return "Project name cannot be empty";
 	if (value.length === 0) return "Project name cannot be empty";
-	if (value.toLocaleLowerCase() !== value)
+	if (value.toLowerCase() !== value)
 		return "Project name must be lowercase";
 	if (/\s/.test(value)) return "Project name cannot contain spaces";
 	if (/[^a-z0-9-_]/.test(value))
 		return "Project name can only contain letters, numbers, hyphens, and underscores";
+	if (!/^[a-z0-9]/.test(value))
+		return "Project name must start with a letter or number";
 	return undefined;
 }
 
@@ -677,40 +710,6 @@ export function isMainModule(
 }
 
 // NOTE: Constants
-const POWER_PAGES_KENDO_MAIN_TSX = `import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import "@progress/kendo-theme-fluent/dist/all.css";
-import "./index.css";
-import App from "./App.tsx";
-
-import { AuthProvider } from "./context/AuthContext.tsx";
-
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            refetchOnWindowFocus: false,
-            retry: 3,
-            staleTime: 5 * 60 * 1000, // 5 minutes
-        },
-        mutations: {
-            retry: 1,
-        },
-    },
-});
-
-const root = createRoot(document.getElementById("root")!);
-
-root.render(
-    <StrictMode>
-        <AuthProvider>
-            <QueryClientProvider client={queryClient}>
-                <App />
-            </QueryClientProvider>
-        </AuthProvider>
-    </StrictMode>
-);`;
-
 const GIT_IGNORE = `# Dependencies
 node_modules/
 npm-debug.log*
@@ -777,9 +776,8 @@ jspm_packages/
 .nuxt
 dist
 
-# Gatsby files
+# Cache
 .cache/
-public
 
 # Storybook build outputs
 .out
@@ -790,7 +788,9 @@ tmp/
 temp/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -803,4 +803,7 @@ temp/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db`;
+Thumbs.db
+
+# Token
+token.json`;

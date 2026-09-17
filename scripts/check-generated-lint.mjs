@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -33,6 +33,7 @@ export const helper = () => 42;
 const corrected = `
 import { useEffect, useState } from 'react';
 import { QueryClient, useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 export function Corrected({ id }: { id: string }) {
   useEffect(() => { console.log(id); }, [id]);
   const [client] = useState(() => new QueryClient());
@@ -79,6 +80,9 @@ try {
       `Missing lint protection: ${code} (${severity})`);
   }
   fs.writeFileSync(fixture, corrected);
+  execFileSync(process.execPath, [path.join(projectDir, "node_modules", "@typescript", "native", "bin", "tsc"), "-b"], {
+    cwd: projectDir, stdio: "inherit",
+  });
   const passing = lint();
   assert.equal(passing.status, 0, JSON.stringify(passing.diagnostics));
   assert.deepEqual(passing.diagnostics, [], "Corrected example must have no diagnostics");

@@ -72,29 +72,29 @@ function createPcfWebApi(
 	context: ComponentFramework.Context<IInputs>,
 ): PcfWebApi {
 	return {
-		async retrieve<T>(entitySet: string, id: string, query = ""): Promise<T> {
+		async retrieve<T>(entityType: string, id: string, query = ""): Promise<T> {
 			return (await context.webAPI.retrieveRecord(
-				entitySet,
+				entityType,
 				id,
 				query,
 			)) as T;
 		},
-		async retrieveMultiple<T>(entitySet: string, query = ""): Promise<T[]> {
+		async retrieveMultiple<T>(entityType: string, query = ""): Promise<T[]> {
 			const response = await context.webAPI.retrieveMultipleRecords(
-				entitySet,
+				entityType,
 				query,
 			);
 			return response.entities as T[];
 		},
-		async create<T>(entitySet: string, data: unknown): Promise<T> {
+		async create<T>(entityType: string, data: unknown): Promise<T> {
 			return (await context.webAPI.createRecord(
-				entitySet,
+				entityType,
 				data as ComponentFramework.WebApi.Entity,
 			)) as T;
 		},
-		async update(entitySet: string, id: string, data: unknown): Promise<void> {
+		async update(entityType: string, id: string, data: unknown): Promise<void> {
 			await context.webAPI.updateRecord(
-				entitySet,
+				entityType,
 				id,
 				data as ComponentFramework.WebApi.Entity,
 			);
@@ -152,9 +152,7 @@ export class {{PCF_CONSTRUCTOR}}
 	}
 
 	public getOutputs(): IOutputs {
-		return {
-			hostField: this.runtime.recordId ?? undefined,
-		};
+		return {};
 	}
 
 	public destroy(): void {

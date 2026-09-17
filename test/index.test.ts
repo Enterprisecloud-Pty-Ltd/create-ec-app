@@ -12,6 +12,7 @@ import {
 	main,
 	parseCliArgs,
 	printHelp,
+	printVersion,
 	readStringOption,
 	readTarget,
 	readUiType,
@@ -178,6 +179,12 @@ describe("CLI helper functions", () => {
 		);
 		expect(validateProjectName("bad!")).toBe(
 			"Project name can only contain letters, numbers, hyphens, and underscores",
+		);
+		expect(validateProjectName("_bad")).toBe(
+			"Project name must start with a letter or number",
+		);
+		expect(validateProjectName("-bad")).toBe(
+			"Project name must start with a letter or number",
 		);
 		expect(validateProjectName("good-name_1")).toBeUndefined();
 		expect(isAppTarget("portal")).toBe(true);
@@ -415,8 +422,18 @@ describe("scaffoldProject", () => {
 		await expect(fs.pathExists(path.join(projectDir, ".git"))).resolves.toBe(false);
 		await expect(fs.pathExists(path.join(projectDir, "token.json"))).resolves.toBe(false);
 		await expect(
+			fs.pathExists(path.join(projectDir, "package-lock.json")),
+		).resolves.toBe(false);
+		await expect(
 			fs.pathExists(path.join(projectDir, "src", "services", "AuthService.ts")),
 		).resolves.toBe(false);
+
+		const packageJson = await fs.readJson(path.join(projectDir, "package.json"));
+		expect(packageJson.name).toBe("code-app-demo");
+
+		const gitignore = await fs.readFile(path.join(projectDir, ".gitignore"), "utf8");
+		expect(gitignore).toContain("token.json");
+		expect(gitignore).toContain("!.vscode/settings.json");
 
 		const agents = await fs.readFile(path.join(projectDir, "AGENTS.md"), "utf8");
 		expect(agents).toContain("Power Apps-hosted code app");
@@ -426,7 +443,7 @@ describe("scaffoldProject", () => {
 		expect(agents).not.toContain("<!-- figma-host -->");
 	});
 
-	it("applies the Power Pages Kendo main template", async () => {
+	it("composes Power Pages hosted-session support with Kendo", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
 
@@ -439,18 +456,96 @@ describe("scaffoldProject", () => {
 			skipGit: true,
 		});
 
-		await expect(
-			fs.readFile(path.join(rootDir, "power-pages-kendo", "src", "main.tsx"), "utf8"),
-		).resolves.toContain("<AuthProvider>");
+		const mainTsx = await fs.readFile(
+			path.join(rootDir, "power-pages-kendo", "src", "main.tsx"),
+			"utf8",
+		);
+		expect(mainTsx).toContain("@progress/kendo-theme-fluent/dist/all.css");
+		expect(mainTsx).toContain("<QueryClientProvider");
+		expect(mainTsx).not.toContain("AuthProvider");
+
+		const powerPages = await fs.readFile(
+			path.join(rootDir, "power-pages-kendo", "src", "powerPages.ts"),
+			"utf8",
+		);
+		expect(powerPages).toContain("window.Microsoft?.Dynamic365?.Portal?.User");
+		expect(powerPages).toContain('fetch("/_layout/tokenhtml"');
+
+		const config = await fs.readJson(
+			path.join(rootDir, "power-pages-kendo", "powerpages.config.json"),
+		);
+		expect(config).toMatchObject({
+			$schema: "https://www.schemastore.org/powerpages.config.json",
+			siteName: "power-pages-kendo",
+			compiledPath: "dist",
+			defaultLandingPage: "index.html",
+			bundleFilePatterns: ["index-*.js", "index-*.css"],
+		});
+		const packageJson = await fs.readJson(
+			path.join(rootDir, "power-pages-kendo", "package.json"),
+		);
+		expect(packageJson.allowScripts).toEqual({
+			"@progress/kendo-licensing@1.11.3": true,
+		});
 
 		const agents = await fs.readFile(
 			path.join(rootDir, "power-pages-kendo", "AGENTS.md"),
 			"utf8",
 		);
-		expect(agents).toContain("src/context/AuthContext.tsx");
+		expect(agents).toContain("src/powerPages.ts");
+		expect(agents).toContain("window.Microsoft.Dynamic365.Portal.User");
 		expect(agents).toContain("root-relative `/_api/...` URLs");
 		expect(agents).toContain("split Power Pages site header");
 		expect(agents).toContain("local `/_api` proxy smoke test");
+	});
+
+	it("applies combination patches after the target and UI layers", async () => {
+		const rootDir = await makeTempDir();
+		const combinationDir = path.resolve(import.meta.dirname, "../templates/combinations/power-pages-kendo");
+		const patchPath = path.join(combinationDir, "package.patch.json");
+		const directoryExisted = await fs.pathExists(combinationDir);
+		const originalPatch = await fs.pathExists(patchPath) ? await fs.readFile(patchPath) : undefined;
+		try {
+			await fs.outputJson(patchPath, {
+				description: "{{APP_NAME}} combination",
+				scripts: { dev: "combination-dev" },
+			});
+			process.chdir(rootDir);
+			await scaffoldProject({
+				projectName: "combined-app", target: "power-pages", uiType: "kendo",
+				install: false, force: false, skipGit: true,
+			});
+			const generated = await fs.readJson(path.join(rootDir, "combined-app", "package.json"));
+			expect(generated.description).toBe("combined-app combination");
+			expect(generated.scripts.dev).toBe("combination-dev");
+			expect(generated.dependencies["@progress/kendo-react-buttons"]).toBe("^15.1.0");
+		} finally {
+			if (originalPatch === undefined) await fs.remove(patchPath);
+			else await fs.writeFile(patchPath, originalPatch);
+			if (!directoryExisted) await fs.rmdir(combinationDir);
+		}
+	});
+
+	it("warns that the portal target is a work in progress", async () => {
+		const rootDir = await makeTempDir();
+		process.chdir(rootDir);
+
+		await scaffoldProject({
+			projectName: "portal-demo",
+			target: "portal",
+			uiType: "kendo",
+			install: false,
+			force: false,
+			skipGit: true,
+		});
+
+		const projectDir = path.join(rootDir, "portal-demo");
+		await expect(fs.pathExists(path.join(projectDir, "src", "App.tsx"))).resolves.toBe(
+			true,
+		);
+		await expect(fs.pathExists(path.join(projectDir, "AGENTS.md"))).resolves.toBe(
+			false,
+		);
 	});
 
 	it("can scaffold from the base template when target and UI layers are absent", async () => {
@@ -471,7 +566,7 @@ describe("scaffoldProject", () => {
 			true,
 		);
 		await expect(
-			fs.pathExists(path.join(projectDir, "staticwebapp.config.json")),
+			fs.pathExists(path.join(projectDir, "public", "staticwebapp.config.json")),
 		).resolves.toBe(false);
 		await expect(fs.pathExists(path.join(projectDir, "components.json"))).resolves.toBe(
 			false,
@@ -502,6 +597,14 @@ describe("scaffoldProject", () => {
 		const agents = await fs.readFile(path.join(rootDir, "git-demo", "AGENTS.md"), "utf8");
 		expect(agents).toContain("There is no host chrome. The Figma frame is the app.");
 		expect(agents).toContain("SWA CLI smoke test");
+
+		const packageJson = await fs.readJson(
+			path.join(rootDir, "git-demo", "package.json"),
+		);
+		expect(packageJson.allowScripts).toEqual({
+			"@progress/kendo-licensing@1.11.3": true,
+			"keytar@7.9.0": true,
+		});
 	});
 
 	it("reports git initialization failures with the skip-git escape hatch", async () => {
@@ -587,6 +690,43 @@ describe("main", () => {
 		expect(exit).toHaveBeenCalledWith(0);
 	});
 
+	it("prints the CLI version and exits without prompting", async () => {
+		process.argv = ["node", "create-ec-app", "--version"];
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process exit");
+		}) as never);
+
+		await expect(main()).rejects.toThrow("process exit");
+
+		expect(log).toHaveBeenCalledWith("0.0.0-development");
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("prints the CLI version for the -v shorthand", async () => {
+		process.argv = ["node", "create-ec-app", "-v"];
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+			throw new Error("process exit");
+		}) as never);
+
+		await expect(main()).rejects.toThrow("process exit");
+
+		expect(log).toHaveBeenCalledWith("0.0.0-development");
+		expect(exit).toHaveBeenCalledWith(0);
+	});
+
+	it("prints unknown when the CLI package version is missing", async () => {
+		const rootDir = await makeTempDir();
+		const packageJsonPath = path.join(rootDir, "package.json");
+		await fs.writeJson(packageJsonPath, { name: "no-version" });
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+		printVersion(packageJsonPath);
+
+		expect(log).toHaveBeenCalledWith("unknown");
+	});
+
 	it("runs the non-interactive scaffold path", async () => {
 		const rootDir = await makeTempDir();
 		process.chdir(rootDir);
@@ -606,11 +746,19 @@ describe("main", () => {
 		await main();
 
 		await expect(
-			fs.pathExists(path.join(rootDir, "main-demo", "staticwebapp.config.json")),
+			fs.pathExists(
+				path.join(rootDir, "main-demo", "public", "staticwebapp.config.json"),
+			),
 		).resolves.toBe(true);
 		await expect(
 			fs.pathExists(path.join(rootDir, "main-demo", ".git")),
 		).resolves.toBe(false);
+	});
+
+	it("rejects a --pcf-dir flag without a directory value", async () => {
+		process.argv = ["node", "create-ec-app", "--pcf-dir"];
+
+		await expect(main()).rejects.toThrow("--pcf-dir requires a directory path");
 	});
 
 	it("runs the PCF generation path", async () => {
@@ -629,12 +777,13 @@ describe("main", () => {
 		process.argv = [
 			"node",
 			"create-ec-app",
-			"--pcf-dir",
-			projectDir,
+			`--pcf-dir=${projectDir}`,
 			"--output",
 			"pcf/MainHost",
 			"--constructor",
 			"MainHost",
+			"--version",
+			"9.9.9",
 		];
 
 		await main();

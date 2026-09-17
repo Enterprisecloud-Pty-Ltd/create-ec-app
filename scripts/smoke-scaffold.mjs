@@ -7,8 +7,22 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const cliPath = path.join(repoRoot, "dist", "index.js");
+// npm supplies its JavaScript entrypoint, so Windows never has to execute npm.cmd.
+const npmCli = process.env.npm_execpath;
+if (!npmCli) {
+	throw new Error("Run this script with npm run smoke:scaffold.");
+}
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "create-ec-app-smoke-"));
+const packedPrefix = path.join(tempRoot, "packed-cli");
+// Scaffold through the published tarball, not the repo, so publish-time file
+// stripping (for example npm dropping .gitignore) is caught here.
+const cliPath = path.join(
+	packedPrefix,
+	"node_modules",
+	"create-ec-app",
+	"dist",
+	"index.js",
+);
 
 const matrix = [
 	["webresource", "kendo"],
@@ -22,9 +36,37 @@ const matrix = [
 ];
 
 try {
-	execFileSync("npm", ["run", "build"], { cwd: repoRoot, stdio: "inherit" });
+	execFileSync(process.execPath, [npmCli, "run", "build"], { cwd: repoRoot, stdio: "inherit" });
 
-	const helpOutput = execFileSync("node", [cliPath, "--help"], {
+	const packOutput = execFileSync(
+		process.execPath,
+		[npmCli, "pack", "--pack-destination", tempRoot],
+		{ cwd: repoRoot, encoding: "utf8" },
+	);
+	const tarballName = packOutput
+		.trim()
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.pop();
+	fs.mkdirSync(packedPrefix, { recursive: true });
+	execFileSync(
+		process.execPath,
+		[
+			npmCli,
+			"install",
+			path.join(tempRoot, tarballName),
+			"--prefix",
+			packedPrefix,
+			"--no-save",
+			"--ignore-scripts",
+			"--no-audit",
+			"--no-fund",
+		],
+		{ cwd: tempRoot, stdio: "inherit" },
+	);
+
+	const helpOutput = execFileSync(process.execPath, [cliPath, "--help"], {
 		cwd: tempRoot,
 		encoding: "utf8",
 		stdio: "pipe",
@@ -41,7 +83,7 @@ try {
 		const projectDir = path.join(tempRoot, projectName);
 
 		execFileSync(
-			"node",
+			process.execPath,
 			[
 				cliPath,
 				"--project-name",
@@ -58,8 +100,30 @@ try {
 
 		assertPath(projectDir, `${projectName} project folder`);
 		assertPath(path.join(projectDir, "package.json"), `${projectName} package.json`);
+		assertFileContains(path.join(projectDir, "index.html"), `<title>${projectName}</title>`, `${projectName} document title`);
 		assertPath(path.join(projectDir, "src", "App.tsx"), `${projectName} App.tsx`);
 		assertMissing(path.join(projectDir, ".git"), `${projectName} .git directory`);
+		assertMissing(
+			path.join(projectDir, "package-lock.json"),
+			`${projectName} stale template lockfile`,
+		);
+		const generatedPackageJson = readJson(path.join(projectDir, "package.json"));
+		assert(
+			generatedPackageJson.name === projectName,
+			`${projectName} package.json name should be the project name`,
+		);
+		const agentGuidance = fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8");
+		assert(!/\{\{[A-Z_]+\}\}/.test(agentGuidance), `${projectName} unresolved agent guidance tokens`);
+		const gitignore = fs.readFileSync(path.join(projectDir, ".gitignore"), "utf8");
+		assert(
+			gitignore.includes("token.json"),
+			`${projectName} .gitignore should ignore token.json`,
+		);
+		assert(
+			gitignore.includes("!.vscode/settings.json"),
+			`${projectName} .gitignore should keep shared VS Code settings`,
+		);
+		assert(!gitignore.split(/\r?\n/).includes("public"), `${projectName} must track public deployment assets`);
 		assertRegularFileContains(
 			path.join(projectDir, "CLAUDE.md"),
 			"@AGENTS.md",
@@ -88,6 +152,7 @@ try {
 				path.join(projectDir, "src", "lib", "utils.ts"),
 				`${projectName} shadcn utils`,
 			);
+			assertShadcnThemeSource(projectDir, projectName);
 		}
 
 		if (ui === "kendo") {
@@ -165,24 +230,24 @@ try {
 		}
 
 		if (target === "power-pages") {
-			assertPath(
-				path.join(projectDir, "src", "context", "AuthContext.tsx"),
-				`${projectName} power pages auth context`,
-			);
-			assertPath(
-				path.join(projectDir, "src", "components", "shared", "AuthError.tsx"),
-				`${projectName} power pages auth error component`,
-			);
-			assertFileContains(
-				path.join(projectDir, "AGENTS.md"),
-				"split Power Pages site header",
-				`${projectName} Power Pages Figma host boundary`,
-			);
+			assertFileContains(path.join(projectDir, "src", "powerPages.ts"),
+				"window.Microsoft?.Dynamic365?.Portal?.User", `${projectName} hosted user access`);
+			assertFileContains(path.join(projectDir, "src", "powerPages.ts"),
+				"/_layout/tokenhtml", `${projectName} request verification token`);
+			assertFileContains(path.join(projectDir, "src", "main.tsx"),
+				"QueryClientProvider", `${projectName} query provider`);
+			assertMissing(path.join(projectDir, "src", "context", "AuthContext.tsx"), `${projectName} legacy ADAL context`);
+			const pagesConfig = readJson(path.join(projectDir, "powerpages.config.json"));
+			assert(pagesConfig.siteName === projectName, `${projectName} Power Pages site name`);
+			assert(pagesConfig.compiledPath === "dist", `${projectName} Power Pages build directory`);
+			assert(pagesConfig.bundleFilePatterns.includes("index-*.js"), `${projectName} stale bundle cleanup`);
+			assertFileContains(path.join(projectDir, "AGENTS.md"),
+				"split Power Pages site header", `${projectName} Power Pages Figma host boundary`);
 		}
 
 		if (target === "swa") {
 			assertPath(
-				path.join(projectDir, "staticwebapp.config.json"),
+				path.join(projectDir, "public", "staticwebapp.config.json"),
 				`${projectName} staticwebapp.config.json`,
 			);
 			assertPath(
@@ -219,13 +284,34 @@ try {
 		}
 	}
 
+	const portalDir = path.join(tempRoot, "portal-wip");
+	execFileSync(
+		process.execPath,
+		[
+			cliPath,
+			"--project-name",
+			"portal-wip",
+			"--target",
+			"portal",
+			"--ui",
+			"kendo",
+			"--no-install",
+			"--skip-git",
+		],
+		{ cwd: tempRoot, stdio: "pipe" },
+	);
+	assertPath(path.join(portalDir, "package.json"), "portal-wip package.json");
+	assertMissing(path.join(portalDir, "AGENTS.md"), "portal-wip AGENTS.md");
+	assertMissing(path.join(portalDir, "CLAUDE.md"), "portal-wip CLAUDE.md");
+
 	const guardedProject = path.join(tempRoot, "existing-project");
 	fs.mkdirSync(guardedProject);
 	fs.writeFileSync(path.join(guardedProject, "keep.txt"), "do not overwrite");
 
+	let guardOutput;
 	try {
 		execFileSync(
-			"node",
+			process.execPath,
 			[
 				cliPath,
 				"--project-name",
@@ -239,17 +325,16 @@ try {
 			],
 			{ cwd: tempRoot, encoding: "utf8", stdio: "pipe" },
 		);
-		throw new Error("Expected existing non-empty project directory to fail");
 	} catch (error) {
-		const output = `${error.stdout ?? ""}${error.stderr ?? ""}`;
-		assert(
-			output.includes("already exists and is not empty"),
-			"Existing non-empty directory fails with a clear error",
-		);
+		guardOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`;
 	}
+	assert(
+		guardOutput?.includes("already exists and is not empty"),
+		"Existing non-empty directory fails with a clear error",
+	);
 
 	execFileSync(
-		"node",
+		process.execPath,
 		[
 			cliPath,
 			"--project-name",
@@ -299,6 +384,20 @@ function assertRegularFileContains(filePath, expected, label) {
 	const stat = fs.lstatSync(filePath);
 	assert(stat.isFile(), `${label} should be a regular file: ${filePath}`);
 	assertFileContains(filePath, expected, label);
+}
+
+function assertShadcnThemeSource(projectDir, projectName) {
+	const css = fs.readFileSync(path.join(projectDir, "src", "index.css"), "utf8");
+	for (const expected of [
+		"@theme inline",
+		"--color-background: var(--background);",
+		"--color-popover: var(--popover);",
+		"--background: oklch(1 0 0);",
+		"--popover: oklch(1 0 0);",
+		"--sidebar-ring: oklch(0.708 0 0);",
+	]) {
+		assert(css.includes(expected), `${projectName} shadcn theme is missing ${expected}`);
+	}
 }
 
 function assert(condition, message) {

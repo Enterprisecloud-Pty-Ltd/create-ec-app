@@ -105,21 +105,28 @@ describe("applyLayer", () => {
 		const layerDir = path.join(rootDir, "layer");
 
 		await fs.outputJson(path.join(projectDir, "package.json"), {
+			allowScripts: { "base-install@1.0.0": true },
 			dependencies: { react: "19.0.0" },
 			scripts: { build: "vite build" },
 			nested: { replaced: false, removed: true },
 		});
 		await fs.outputJson(path.join(layerDir, "package.patch.json"), {
+			allowScripts: { "layer-install@2.0.0": true },
 			dependencies: { react: "19.2.7" },
 			scripts: { test: "vitest run" },
 			nested: { replaced: true },
 		});
 		await fs.outputFile(path.join(layerDir, "src", "App.patch.tsx"), "patched");
 		await fs.outputFile(path.join(layerDir, "README.md"), "copied");
+		await fs.outputFile(path.join(layerDir, "gitignore"), "node_modules/\n");
 
 		await applyLayer(layerDir, projectDir);
 
 		await expect(fs.readJson(path.join(projectDir, "package.json"))).resolves.toEqual({
+			allowScripts: {
+				"base-install@1.0.0": true,
+				"layer-install@2.0.0": true,
+			},
 			dependencies: { react: "19.2.7" },
 			scripts: { build: "vite build", test: "vitest run" },
 			nested: { replaced: true },
@@ -130,6 +137,12 @@ describe("applyLayer", () => {
 		await expect(
 			fs.readFile(path.join(projectDir, "README.md"), "utf8"),
 		).resolves.toBe("copied");
+		await expect(
+			fs.readFile(path.join(projectDir, ".gitignore"), "utf8"),
+		).resolves.toBe("node_modules/\n");
+		await expect(fs.pathExists(path.join(projectDir, "gitignore"))).resolves.toBe(
+			false,
+		);
 	});
 
 	it("throws when a JSON patch is not an object", async () => {

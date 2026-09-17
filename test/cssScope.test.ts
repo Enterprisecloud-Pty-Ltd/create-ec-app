@@ -76,6 +76,27 @@ describe("scopeCssForPcf", () => {
 		);
 	});
 
+	it("unwraps cascade layers in source order so host CSS cannot outrank utilities", () => {
+		const output = scopeCssForPcf(
+			`@layer theme, base, components, utilities;
+@layer base { button { padding: 0; } }
+@layer utilities { .p-4 { padding: 1rem; } }
+@media (min-width: 640px) {
+  @layer utilities { .sm\\:p-6 { padding: 1.5rem; } }
+}`,
+			"LayeredHost",
+		);
+		const scope = '.pcf-shell-control[data-pcf-control="LayeredHost"]';
+
+		expect(output).not.toContain("@layer");
+		expect(output).toContain(`${scope} button`);
+		expect(output).toContain(`${scope} .p-4`);
+		expect(output).toContain(`${scope} .sm\\:p-6`);
+		expect(output.indexOf(`${scope} button`)).toBeLessThan(
+			output.indexOf(`${scope} .p-4`),
+		);
+	});
+
 	it("keeps already-scoped selectors and maps app root aliases to the host", () => {
 		const output = scopeCssForPcf(
 			`.pcf-shell-control[data-pcf-control="Existing"] .button { color: red; }
@@ -131,6 +152,21 @@ describe("check-generated-css-scope", () => {
 			execFileSync(
 				"node",
 				["scripts/check-generated-css-scope.mjs", failDir],
+				{ cwd: repoRoot, stdio: "pipe" },
+			),
+		).toThrow();
+
+		const layeredDir = await makeTempDir();
+		await fs.writeFile(
+			path.join(layeredDir, "pcf-scoped.css"),
+			'@layer utilities { .pcf-shell-control[data-pcf-control="Demo"] .p-4 { padding: 1rem; } }',
+			"utf8",
+		);
+
+		expect(() =>
+			execFileSync(
+				"node",
+				["scripts/check-generated-css-scope.mjs", layeredDir],
 				{ cwd: repoRoot, stdio: "pipe" },
 			),
 		).toThrow();

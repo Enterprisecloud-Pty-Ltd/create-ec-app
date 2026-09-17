@@ -95,3 +95,8 @@ Keep dated entries for material changes to this app's tooling or agent instructi
 
 - Expanded shared guidance for component boundaries, service flow, file organization, and clarification. Necessary in-scope fixes do not require repeated approval.
 - Expanded the webresource overlay with critical-file boundaries, targeted validation, error handling, and a typed Dataverse service example. Retained the existing Figma and design-system lint rules.
+
+### 2026-09-16 - Fresh-install handover checks
+
+- Updated the shared baseline to React 19.3, Query 5.103.1, Zod 4.6.5, and Oxlint 1.83. The TypeScript 6 API alias uses the available `@typescript/typescript6@6.0.2` release; application compilation remains TypeScript 7.0.2.
+- Public deployment assets remain tracked. The generator checks packed artifacts, fresh installs and lockfile reinstalls, zero-warning lint, and builds before and after PCF conversion. These are generator checks; verify this application's changes and live host separately.

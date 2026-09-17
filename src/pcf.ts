@@ -13,12 +13,17 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const PCF_GENERATOR_MARKER = "create-ec-app.pcf.json";
+const PCF_GENERATOR_MARKER_CONTENT = {
+	generatedBy: "create-ec-app",
+	kind: "pcf-wrapper",
+};
 
 const RUNTIME_TYPES_TEMPLATE = `export interface PcfWebApi {
-\tretrieve<T = Record<string, unknown>>(entitySet: string, id: string, query?: string): Promise<T>;
-\tretrieveMultiple<T = Record<string, unknown>>(entitySet: string, query?: string): Promise<T[]>;
-\tcreate<T = unknown>(entitySet: string, data: unknown): Promise<T>;
-\tupdate(entitySet: string, id: string, data: unknown): Promise<void>;
+\tretrieve<T = Record<string, unknown>>(entityType: string, id: string, query?: string): Promise<T>;
+\tretrieveMultiple<T = Record<string, unknown>>(entityType: string, query?: string): Promise<T[]>;
+\tcreate<T = unknown>(entityType: string, data: unknown): Promise<T>;
+\tupdate(entityType: string, id: string, data: unknown): Promise<void>;
 }
 
 export interface PcfRuntimeContext {
@@ -37,6 +42,7 @@ export interface PcfCliOptions {
 	description?: string | undefined;
 	displayName?: string | undefined;
 	dist?: string | undefined;
+	force?: boolean | undefined;
 	layers?: string[] | undefined;
 	namespace?: string | undefined;
 	output?: string | undefined;
@@ -58,10 +64,17 @@ export async function generatePcfFromExistingWebresource(
 	const folderName = path.basename(projectDir);
 	const packageName =
 		typeof packageJson?.name === "string" ? packageJson.name : folderName;
+	const hasKendoPopup = hasPackageDependency(
+		packageJson,
+		"@progress/kendo-react-popup",
+	);
 	const displayName = toDisplayName(folderName);
-	const constructorName =
+	let constructorName =
 		options.controlConstructor ??
 		`${toPascalCase(packageName.replace(/[^a-z0-9]+/gi, " "))}Host`;
+	if (options.controlConstructor === undefined && /^\d/.test(constructorName)) {
+		constructorName = `App${constructorName}`;
+	}
 	const namespace = options.namespace ?? "EC";
 	const version = options.version ?? "1.0.0";
 	const distDirName = options.dist ?? "dist";
@@ -69,11 +82,7 @@ export async function generatePcfFromExistingWebresource(
 		projectDir,
 		options.output ?? path.join("pcf", constructorName),
 	);
-	if (outputDir === projectDir) {
-		throw new Error(
-			"PCF output directory cannot be the webresource project root. Choose a subdirectory such as --output pcf/MyControl.",
-		);
-	}
+	await assertSafePcfOutput(projectDir, outputDir, distDirName);
 	const templateDir = path.resolve(
 		options.template ?? path.join(__dirname, "..", "templates", "pcf", "base"),
 	);
@@ -86,6 +95,16 @@ export async function generatePcfFromExistingWebresource(
 		`PCF wrapper that renders the ${displayName} React app directly inside a PCF control.`;
 	const packageNameToken =
 		options.packageName ?? toKebabCase(constructorName);
+
+	validatePcfOptions({
+		constructorName,
+		description: controlDescription,
+		displayName: controlDisplayName,
+		namespace,
+		packageName: packageNameToken,
+		version,
+	});
+	await assertRemovablePcfOutput(outputDir, options.force ?? false);
 
 	const relToProject = toPosixPath(path.relative(outputDir, projectDir));
 	const appImportPath = ensureRelativeImport(
@@ -115,6 +134,10 @@ export async function generatePcfFromExistingWebresource(
 		sourceCssPath,
 		`Could not find ${distDirName}/main.css in ${projectDir}. Run the webresource build first.`,
 	);
+	await assertReadablePcfLayer(templateDir, "PCF template", outputDir);
+	for (const layerDir of layerDirs) {
+		await assertReadablePcfLayer(layerDir, "PCF layer", outputDir);
+	}
 
 	await ensureRuntimeTypes(projectDir);
 	await ensurePortalContainerRuntime(projectDir);
@@ -131,12 +154,26 @@ export async function generatePcfFromExistingWebresource(
 	for (const layerDir of layerDirs) {
 		await applyLayer(layerDir, outputDir);
 	}
+	await fs.writeJson(
+		path.join(outputDir, PCF_GENERATOR_MARKER),
+		PCF_GENERATOR_MARKER_CONTENT,
+		{ spaces: 2 },
+	);
 	await fs.writeFile(path.join(outputDir, PCF_SCOPED_CSS_FILE), pcfCss, "utf8");
 
 	await replaceTokensRecursively(outputDir, {
 		CONTROL_DESCRIPTION: controlDescription,
 		CONTROL_DISPLAY_NAME: controlDisplayName,
 		PCF_CONSTRUCTOR: constructorName,
+		PCF_KENDO_POPUP_IMPORT: hasKendoPopup
+			? 'import { PopupPropsContext } from "@progress/kendo-react-popup";'
+			: "",
+		PCF_KENDO_POPUP_PROVIDER_CLOSE: hasKendoPopup
+			? "</PopupPropsContext.Provider>"
+			: "",
+		PCF_KENDO_POPUP_PROVIDER_OPEN: hasKendoPopup
+			? '<PopupPropsContext.Provider value={(props) => ({ ...props, appendTo: portalContainer })}>'
+			: "",
 		PCF_NAMESPACE: namespace,
 		PCF_PACKAGE_NAME: packageNameToken,
 		PCF_VERSION: version,
@@ -162,6 +199,198 @@ export async function generatePcfFromExistingWebresource(
 		outputDir,
 		templateDir,
 	};
+}
+
+function hasPackageDependency(
+	packageJson: Record<string, unknown> | null,
+	packageName: string,
+): boolean {
+	for (const field of ["dependencies", "devDependencies"] as const) {
+		const dependencies = packageJson?.[field];
+		if (
+			typeof dependencies === "object" &&
+			dependencies !== null &&
+			packageName in dependencies
+		) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Tokens land in XML attributes, resx values, JSON strings, and TypeScript
+// identifiers, so reject values that would corrupt the generated control.
+function validatePcfOptions(values: {
+	constructorName: string;
+	description: string;
+	displayName: string;
+	namespace: string;
+	packageName: string;
+	version: string;
+}): void {
+	if (!/^[A-Za-z][A-Za-z0-9]*$/.test(values.constructorName)) {
+		throw new Error(
+			`Invalid PCF constructor name "${values.constructorName}". Use only letters and digits, starting with a letter.`,
+		);
+	}
+
+	if (!/^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*$/.test(values.namespace)) {
+		throw new Error(
+			`Invalid PCF namespace "${values.namespace}". Use dot-separated names with only letters and digits, each starting with a letter, such as EC.Controls.`,
+		);
+	}
+
+	// The value must satisfy both npm semver and pcf-scripts' numeric version schema.
+	if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(values.version)) {
+		throw new Error(
+			`Invalid PCF version "${values.version}". Use a numeric major.minor.patch version such as 1.0.0, without leading zeros, prerelease labels, or build metadata.`,
+		);
+	}
+
+	if (
+		!/^(?:@[a-z0-9][a-z0-9._~-]*\/)?[a-z0-9][a-z0-9._~-]*$/.test(
+			values.packageName,
+		)
+	) {
+		throw new Error(
+			`Invalid PCF package name "${values.packageName}". Use a lowercase npm package name.`,
+		);
+	}
+
+	for (const [label, value] of [
+		["display name", values.displayName],
+		["description", values.description],
+	] as const) {
+		if (/[<>&"\\\p{Cc}]/u.test(value)) {
+			throw new Error(
+				`Invalid PCF ${label} "${value}". It cannot contain <, >, &, ", backslashes, or control characters because it is embedded in generated XML and JSON files.`,
+			);
+		}
+	}
+}
+
+// Only this generator-owned marker permits automatic regeneration. A normal PCF
+// manifest is not sufficient because hand-maintained controls use the same path.
+async function assertRemovablePcfOutput(
+	outputDir: string,
+	force: boolean,
+): Promise<void> {
+	if (!(await fs.pathExists(outputDir))) {
+		return;
+	}
+
+	const entries = await fs.readdir(outputDir);
+	if (entries.length === 0) {
+		return;
+	}
+
+	const marker = await readJson(path.join(outputDir, PCF_GENERATOR_MARKER));
+	const looksGenerated =
+		marker?.generatedBy === PCF_GENERATOR_MARKER_CONTENT.generatedBy &&
+		marker.kind === PCF_GENERATOR_MARKER_CONTENT.kind;
+	if (looksGenerated || force) {
+		return;
+	}
+
+	throw new Error(
+		`PCF output directory "${outputDir}" is not empty and does not look like a generated PCF control. Use --force to overwrite it.`,
+	);
+}
+
+async function assertReadablePcfLayer(
+	layerDir: string,
+	label: string,
+	outputDir: string,
+): Promise<void> {
+	let stat;
+	try {
+		stat = await fs.stat(layerDir);
+	} catch (error) {
+		throw new Error(`${label} directory is not readable: ${layerDir}`, {
+			cause: error,
+		});
+	}
+	if (!stat.isDirectory()) {
+		throw new Error(`${label} path is not a directory: ${layerDir}`);
+	}
+	try {
+		await fs.readdir(layerDir);
+	} catch (error) {
+		throw new Error(`${label} directory is not readable: ${layerDir}`, {
+			cause: error,
+		});
+	}
+
+	const [realLayerDir, realOutputDir] = await Promise.all([
+		resolvePathAliases(layerDir),
+		resolvePathAliases(outputDir),
+	]);
+	if (
+		isSameOrDescendant(realOutputDir, realLayerDir) ||
+		isSameOrDescendant(realLayerDir, realOutputDir)
+	) {
+		throw new Error(
+			`${label} directory cannot overlap the PCF output directory: ${layerDir}`,
+		);
+	}
+}
+
+async function assertSafePcfOutput(
+	projectDir: string,
+	outputDir: string,
+	distDirName: string,
+): Promise<void> {
+	const [realProjectDir, realOutputDir] = await Promise.all([
+		resolvePathAliases(projectDir),
+		resolvePathAliases(outputDir),
+	]);
+	if (isSameOrDescendant(realOutputDir, realProjectDir)) {
+		throw new Error(
+			"PCF output directory cannot be the webresource project root or a directory that contains it. Choose a subdirectory such as --output pcf/MyControl.",
+		);
+	}
+
+	for (const criticalDir of ["src", distDirName]) {
+		const realCriticalDir = await resolvePathAliases(
+			path.join(realProjectDir, criticalDir),
+		);
+		if (isSameOrDescendant(realCriticalDir, realOutputDir)) {
+			throw new Error(
+				`PCF output directory cannot be ${criticalDir} or a directory inside it. Choose a dedicated directory such as --output pcf/MyControl.`,
+			);
+		}
+	}
+}
+
+function isSameOrDescendant(parentDir: string, candidateDir: string): boolean {
+	const relative = path.relative(parentDir, candidateDir);
+	return (
+		relative === "" ||
+		(relative.split(path.sep)[0] !== ".." && !path.isAbsolute(relative))
+	);
+}
+
+interface PathAliasFileSystem {
+	pathExists(path: string): Promise<boolean>;
+	realpath(path: string): Promise<string>;
+}
+
+export async function resolvePathAliases(
+	targetPath: string,
+	fileSystem: PathAliasFileSystem = fs,
+): Promise<string> {
+	let existingPath = path.resolve(targetPath);
+	const missingSegments: string[] = [];
+	while (!(await fileSystem.pathExists(existingPath))) {
+		const parent = path.dirname(existingPath);
+		if (parent === existingPath) {
+			throw new Error(`Could not resolve an existing filesystem root for ${targetPath}.`);
+		}
+		missingSegments.unshift(path.basename(existingPath));
+		existingPath = parent;
+	}
+	return path.join(await fileSystem.realpath(existingPath), ...missingSegments);
 }
 
 async function ensureRuntimeTypes(projectDir: string): Promise<void> {

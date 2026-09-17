@@ -15,11 +15,13 @@ npm run build
 
 `check` runs typechecking and lint. `build` runs typechecking and creates the production Vite bundle. Run both in application CI.
 
+npm 11 blocks dependency install scripts unless the package manifest approves them. This scaffold uses exact-version `allowScripts` entries for reviewed host or UI dependencies such as the SWA CLI credential-store binding and Kendo license activation. Review the new script before changing an approved package version; do not replace the pin with a blanket approval.
+
 ## Compiler and lint setup
 
-The template baseline uses TypeScript 7.0.2, Oxlint 1.81.0, and the matching `oxlint-tsgolint` 7.0.2001 engine. Node 22 and 26 are covered by the generator's Linux CI.
+The template baseline uses TypeScript 7.0.2, Oxlint 1.83.0, and the matching `oxlint-tsgolint` 7.0.2001 engine. Node 22 and 26 are covered by the generator's Linux CI.
 
-`@typescript/native` aliases `typescript@7.0.2` and supplies the `tsc` command. `typescript` aliases Microsoft's `@typescript/typescript6@6.0.3` compatibility package for the JavaScript API used by Query's lint dependencies; its compiler command is `tsc6`. Keep the aliases until those dependencies support the native API. Verify with `npx tsc --version` and `npm ls typescript @typescript/native`.
+`@typescript/native` aliases `typescript@7.0.2` and supplies the `tsc` command. `typescript` aliases Microsoft's `@typescript/typescript6@6.0.2` compatibility package for the JavaScript API used by Query's lint dependencies; its compiler command is `tsc6`. Keep the aliases until those dependencies support the native API. Verify with `npx tsc --version` and `npm ls typescript @typescript/native`.
 
 Oxlint retains React Hooks, Fast Refresh, React Compiler, and recommended TanStack Query rules, plus type-aware floating/misused promise checks. React Compiler, Query, and `@shadcn/lint` rules use the official plugins through Oxlint's JavaScript plugin bridge.
 
