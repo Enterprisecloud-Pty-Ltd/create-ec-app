@@ -67,6 +67,7 @@ function lint() {
   });
   if (result.error) throw result.error;
   assert.equal(result.signal, null, result.stderr);
+  assert.equal(result.stderr.trim(), "", "Lint plugins must load without warnings");
   return { status: result.status, diagnostics: JSON.parse(result.stdout).diagnostics };
 }
 

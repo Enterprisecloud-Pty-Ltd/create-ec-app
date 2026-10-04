@@ -5,7 +5,13 @@ import { fileURLToPath } from "node:url";
 import fs from "fs-extra";
 import { localizeShadcnPortals } from "../src/portalContainers.ts";
 
-const SHADCN_CLI_VERSION = "4.21.0";
+const SHADCN_CLI_VERSION = "4.21.1";
+const CN_VERSION = "0.4.0";
+const RECHARTS_VERSION = "3.10.1";
+const npmCli = process.env.npm_execpath;
+if (!npmCli) {
+	throw new Error("Run this script with npm run refresh:shadcn-template.");
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,9 +22,10 @@ const KEEP_TEMP = process.argv.includes("--keep-temp");
 const SHADCN_UTILS_TEMPLATE = `export { cn } from "cn";\n`;
 const FALLBACK_DEPENDENCY_VERSIONS: Record<string, string> = {
 	"class-variance-authority": "0.7.1",
-	cn: "0.2.6",
-	"lucide-react": "1.41.0",
+	cn: CN_VERSION,
+	"lucide-react": "1.52.0",
 	"radix-ui": "1.6.7",
+	recharts: RECHARTS_VERSION,
 	shadcn: SHADCN_CLI_VERSION,
 };
 const FALLBACK_DEV_DEPENDENCY_VERSIONS: Record<string, string> = {
@@ -62,11 +69,15 @@ async function main() {
 			"utf8",
 		);
 
-		const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
 		execFileSync(
-			npxBin,
+			process.execPath,
 			[
-				`shadcn@${SHADCN_CLI_VERSION}`,
+				npmCli,
+				"exec",
+				"--yes",
+				`--package=shadcn@${SHADCN_CLI_VERSION}`,
+				"--",
+				"shadcn",
 				"add",
 				"--all",
 				"--yes",
@@ -74,6 +85,9 @@ async function main() {
 			],
 			{ cwd: tempProjectDir, stdio: "inherit" },
 		);
+		// Retain the reviewed class grammar and chart version over the registry's older pins.
+		execFileSync(process.execPath, [npmCli, "install", `cn@${CN_VERSION}`, `recharts@${RECHARTS_VERSION}`, "--save-exact"],
+			{ cwd: tempProjectDir, stdio: "inherit" });
 
 		assertThemeTokens(
 			await fs.readFile(path.join(tempProjectDir, "src", "index.css"), "utf8"),

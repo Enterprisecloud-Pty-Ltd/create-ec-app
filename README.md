@@ -16,7 +16,9 @@ For local development in this repo:
 npm run dev -- --project-name my-app --target webresource --ui shadcn-ui --no-install --skip-git
 ```
 
-Node 26 is supported alongside Node 22. CI checks both versions, including the generated-project build workflow. The CLI and generated apps compile with TypeScript 7 and lint with Oxlint. PCF wrappers retain TypeScript 5.9 for compatibility with Microsoft's build tools.
+CI checks the latest Node LTS and Current releases, plus Node 22 for the existing compatibility floor, including the generated-project build workflow. The October 2026 runtime baseline is Node 24.21.0 LTS and Node 26.10.0 Current. The CLI and generated apps compile with TypeScript 7 and lint with Oxlint. PCF wrappers retain TypeScript 5.9 for compatibility with Microsoft's build tools.
+
+The repository's `.mise.toml` selects Node 24.21.0 for local development. With mise installed, run `mise trust`, `mise install`, then `mise exec -- npm ci`. Use `mise exec node@26.10.0 -- npm run check` to check the current release explicitly.
 
 See the shared [tooling and handover guide](docs/tooling.md) for editor setup, the generated apps' TypeScript compatibility aliases, and upgrade checks. The CLI itself uses `typescript@7.0.2` directly and its editor settings select `node_modules/typescript`.
 
@@ -49,7 +51,7 @@ npm run check
 npm run build
 ```
 
-Use Node 22.14 or newer within Node 22, or use Node 26; both lines are covered by CI. Commit the newly generated lockfile and use `npm ci` for later installs. `--skip-git` leaves repository initialization to the caller. Power Pages uses `--target power-pages`; `portal` is not an alias for Power Pages or SWA.
+Use the latest Node LTS release for application development. Node 22.14 or newer within Node 22 and the latest Current release are also checked by CI. Commit the newly generated lockfile and use `npm ci` for later installs. `--skip-git` leaves repository initialization to the caller. Power Pages uses `--target power-pages`; `portal` is not an alias for Power Pages or SWA.
 
 `@latest` selects the published npm release. An unmerged branch or pull request does not change the version installed by that command.
 

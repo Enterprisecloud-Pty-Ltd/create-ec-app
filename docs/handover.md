@@ -1,6 +1,6 @@
 # Maintainer handover
 
-This review prepared the generator, layered templates, and release checks for the next maintainer. It did not publish npm, merge to `main`, or deploy a release. Live host validation used an isolated local handover report outside this public repository; this file deliberately contains no environment names, URLs, record IDs, or credentials.
+The 2026-10-04 refresh updates the generator, layered templates, and release checks for the latest Node LTS and Current releases. The repository's `.mise.toml` selects Node 24.21.0 LTS; CI tracks `lts/*` and `node` with `check-latest: true`, plus `22.x` for the existing compatibility floor. The release job uses LTS. Live host evidence from the September handover remains in a separate private report.
 
 ## Current change set
 
@@ -12,19 +12,22 @@ Shadcn ships its neutral theme variables and Tailwind mappings. PCF CSS retains 
 
 Power Pages now uses the supported shell authentication boundary and tracks only the required target files. Static Web Apps keeps its routing configuration in `public/`, copies it into `dist`, and tests the deployed file. Generated `.gitignore` files allow public deployment assets while excluding local tokens and build output.
 
-The dependency refresh moved Oxlint to 1.83.0 and Vitest plus coverage to 5.0.1, refreshed compatible application dependencies, and updated the GitHub Actions majors. Clack 1.8 cancellation values are narrowed before use. Generated apps compile with TypeScript 7.0.2 and retain the released `@typescript/typescript6@6.0.2` API compatibility alias. The previously recorded 6.0.3 alias target is unavailable from the registry and was masked by the old lockfile.
+The October dependency refresh moves Oxlint from 1.83.0 to 1.86.0 with its required `oxlint-tsgolint` 7.0.2003 engine. Both versions remain exact pins, protected from independent updates by Dependabot and the refresh script. Vitest and coverage move to 5.0.3, Query to 5.104.1, Vite to 8.3.2, Kendo to 16.1.0 with Fluent theme 14.6.0, and the Code Apps SDK to 1.5.0. CLI and template lockfiles also have refreshed compatible transitive dependencies.
+
+Shadcn refresh now uses CLI 4.21.1 and preserves the reviewed `cn` 0.4.0 and Recharts 3.10.1 versions after registry generation. It launches npm's JavaScript entrypoint with the current Node executable, including on Windows. The source snapshot, neutral theme, and portal transforms remain intact. `@shadcn/lint` 0.2.0 reads the application's class grammar without fallback warnings, and the generated lint fixture rejects plugin warnings as well as checking rule diagnostics.
 
 ## Compatibility decisions
 
 - TypeScript 7.0.2 remains the application compiler. The Query lint chain still resolves `@typescript-eslint` packages whose supported compiler API range stops before native TypeScript 7, so keep the TypeScript 6 compatibility alias. Follow Microsoft's [side-by-side compiler guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60) and remove the alias only after the installed dependency tree supports the native API.
-- `oxlint-tsgolint` 7.0.2001 remains the matching type-aware engine for TypeScript 7.0.2. Oxlint 1.83.0 accepts that engine. Keep the React Hooks, Fast Refresh, React Compiler, Query, and shadcn rule fixtures when updating it. Review [Oxlint releases](https://github.com/oxc-project/oxc/releases) and its [type-aware linting guidance](https://oxc.rs/docs/guide/usage/linter/type-aware.html).
+- Oxlint 1.86.0 requires `oxlint-tsgolint >=7.0.2003`, so the previous 7.0.2001 pin cannot be retained with this upgrade. TypeScript 7.0.2 remains the latest stable compiler and the engine supports TypeScript 7. Keep the React Hooks, Fast Refresh, React Compiler, Query, and shadcn rule fixtures when updating the pair. Review the [Oxlint release](https://github.com/oxc-project/oxc/releases/tag/oxlint_v1.86.0), [engine release](https://github.com/oxc-project/tsgolint/releases/tag/v7.0.2003), and [type-aware linting guidance](https://oxc.rs/docs/guide/usage/linter/type-aware.html).
 - Vitest 5 requires Node 22.12 or later and Vite 6.4 or later. The repository floor is Node 22.14 and generated apps use Vite 8, so the paired Vitest and coverage upgrade is supported. See the [Vitest 5 migration guide](https://vitest.dev/guide/migration/).
-- shadcn 4.21.0 and `@shadcn/react` 0.3.1 were still current during the review. No source snapshot refresh was needed. Refresh source, dependency patch, documentation, and tests together when the [shadcn changelog](https://ui.shadcn.com/docs/changelog) identifies a later compatible release.
-- `pcf-scripts` and `pcf-start` 1.51.1 remain the latest released Microsoft packages. `pcf-scripts` still declares TypeScript 4 or 5 and ships `ts-loader` 9, so PCF remains on TypeScript 5.9.3. Reconsider only after a released Microsoft package declares support for the candidate compiler and both generated wrappers pass build, lint, CSS scoping, and runtime checks. See the [`pcf-scripts` release history](https://www.npmjs.com/package/pcf-scripts?activeTab=versions) and Microsoft's [PCF packaging guidance](https://learn.microsoft.com/en-us/power-apps/developer/component-framework/import-custom-controls).
+- Shadcn CLI 4.21.1, `@shadcn/react` 0.3.1, and `cn` 0.4.0 are current stable releases. The pinned refresh ran again and preserved the neutral theme and portal transforms. The [design-system linter](https://github.com/shadcn-ui/lint) requires `cn` 0.3.2 or later to read the application's grammar; 0.4.0 satisfies that condition. Refresh source and dependencies together when the [shadcn changelog](https://ui.shadcn.com/docs/changelog) identifies a later release.
+- `pcf-scripts` and `pcf-start` 1.51.1 remain the latest released Microsoft packages. `pcf-scripts` still declares TypeScript 4 or 5. Its refreshed lock resolves `ts-loader` 9.6.2, whose compiler integration still uses the JavaScript API, so PCF remains on TypeScript 5.9.3. Reconsider only after a released Microsoft package and loader support the candidate compiler and both generated wrappers pass build, lint, CSS scoping, and runtime checks. See the [`pcf-scripts` release history](https://www.npmjs.com/package/pcf-scripts?activeTab=versions), [ts-loader changelog](https://github.com/TypeStrong/ts-loader/blob/main/CHANGELOG.md), and [TypeScript 7 support discussion](https://github.com/TypeStrong/ts-loader/issues/1702).
+- KendoReact 16.1.0 updates the Buttons and Popup packages used by these templates. The listed [16.0 breaking changes](https://www.telerik.com/kendo-react-ui/components/updates/breaking-changes/16-0-0) concern other components. Keep both PCF popup context and CSS scoping checks when refreshing Kendo and its theme.
 
 ## Verification state
 
-The final local gates passed on Node 26.8.1 and the advertised minimum Node 22.14.0:
+On 2026-10-04, the full local gates passed on Node 24.21.0 LTS, Node 26.10.0 Current, and the existing minimum Node 22.14.0. Each runtime passed:
 
 - 149 unit tests with 100% statement, branch, function, and line coverage; CLI typecheck and lint.
 - Packed-package scaffolding, all eight generated app builds and zero-warning lint runs, fresh installs followed by `npm ci`, and TypeScript dependency-tree checks.
@@ -32,7 +35,7 @@ The final local gates passed on Node 26.8.1 and the advertised minimum Node 22.1
 - Generated agent guidance, deployed SWA routing configuration, and compiled shadcn theme tokens for every supported host.
 - npm dry-run package inspection: 170 files, including the new guidance and runtime helpers, with no `node_modules` directories.
 
-The pinned shadcn refresh ran successfully and preserved the restored theme baseline. A local SWA emulator served a deep client route successfully. Browser checks verified Power Pages token parsing with native DOMParser. Native Windows execution and live SWA, Power Pages, and Code Apps deployments were not performed. Dynamics webresource and PCF deployment evidence is recorded in the separate private report.
+The October pinned shadcn refresh preserved the theme baseline. September checks also exercised a local SWA deep route and Power Pages token parsing with native DOMParser; those host checks were not repeated during this dependency refresh. Native Windows execution and paid Kendo license validation remain unverified. Live Dynamics and PCF deployment evidence from September is recorded in the separate private report.
 
 Repeat these commands after material changes:
 
@@ -50,16 +53,26 @@ Kendo license activation remains a separate gate. The matrix approves the exact 
 
 ## Upstream advisories
 
-Root production dependencies and the base application template audit cleanly. The latest Microsoft PCF lock can resolve most older findings, but nine audit entries remain in released `pcf-scripts` and `pcf-start`: the `pcf-start` browser-sync chain accounts for four high findings, while the `pcf-scripts` Application Insights and OpenTelemetry chain accounts for five moderate findings. npm's proposed forced fix is an invalid downgrade to 1.19.4. Recheck when Microsoft publishes a version newer than 1.51.1 with refreshed telemetry and browser-sync dependencies; do not downgrade or add unproven overrides.
+The 2026-10-04 audits found the following entries. Counts include packages affected through transitive chains, so they are not counts of distinct advisories.
 
-Static Web Apps CLI 2.0.10 remains the latest stable release and carries four transitive advisories through `adm-zip`, `devcert`, and `tmp`. npm proposes downgrading to SWA CLI 1.1.3. Keep 2.0.10 and recheck when Microsoft releases a newer stable CLI with a corrected tree. Node 26 also reports the documented `DEP0187` warning from the CLI while the emulator still starts and serves the generated routing configuration.
+| Dependency tree | Remaining entries | Upstream condition to revisit |
+|---|---|---|
+| CLI production dependencies | 0 | Reaudit after dependency changes. |
+| Shared base and a generated Kendo webresource | 0 | Reaudit after dependency changes. |
+| CLI including release tooling | 11: 10 high, 1 moderate | A released Semantic Release dependency chain that fixes `braces`, and an npm bundle that fixes its embedded `brace-expansion`, `http-cache-semantics`, `ip-address`, and `undici`. |
+| Generated shadcn webresource | 7 high | A released shadcn CLI or compatible transitive update that removes the `braces` finding from its fast-glob/ts-morph chain. |
+| PCF tooling | 10: 5 high, 5 moderate | Microsoft packages newer than 1.51.1 with corrected browser-sync/`braces` and Application Insights/OpenTelemetry trees. |
+| Generated SWA with Kendo | 6: 5 high, 1 low | An SWA CLI newer than 2.0.10 with corrected `adm-zip`, devcert/`tmp`, and selfsigned/node-forge trees. |
+| Generated SWA with shadcn | 13: 12 high, 1 low | Both the SWA and shadcn conditions above. |
+
+Compatible audit fixes were applied. Current upstream packages still carry these findings; npm's forced fixes propose obsolete Semantic Release, shadcn 1.0.0, PCF 1.19.4, or SWA CLI 1.1.3 downgrades. Keep the supported packages and recheck the stated release conditions. The shared `braces` finding is [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). SWA CLI also has the previously recorded Node 26 `DEP0187` emulator warning; recheck it with the next CLI release.
 
 ## Account-owner actions
 
 These actions require repository or registry owners and cannot be completed in code:
 
 1. Add a second active npm owner and align npm ownership with `.github/CODEOWNERS`.
-2. Finish `main` branch protection. The API currently reports no required status checks and no required approving review. Require the exact Node 22 and Node 26 `build-test-smoke` and `generated-build` checks from a completed pull request, require reviewed pull requests, require code-owner review for the release surface, and keep force pushes disabled.
+2. Recheck `main` branch protection; the September review reported missing required status checks and approving reviews. Require the exact `22.x`, `lts/*`, and `node` checks from a completed `build-test-smoke` and `generated-build` pull request run, require reviewed pull requests and code-owner review for the release surface, and keep force pushes disabled.
 3. Review and merge the compatible GitHub Actions updates only after the final branch matrix is green.
 4. Exercise one quarterly deployment for each supported host and record the result outside this public repository when it contains tenant or customer details.
 
