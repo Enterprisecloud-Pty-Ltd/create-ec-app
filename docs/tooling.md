@@ -2,6 +2,8 @@
 
 The generated apps use TypeScript **7.0.2** and Oxlint **1.83.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
 
+Keep Oxlint and `oxlint-tsgolint` pinned as a compatible pair in the root and base template. Oxlint 1.86.0 requires `oxlint-tsgolint >=7.0.2003`; a caret range on Oxlint with the 7.0.2001 engine makes fresh generated-app installs fail. Review and update both pins together.
+
 The CLI uses `typescript@7.0.2` directly; its editor settings select `node_modules/typescript`. The generated apps use the compatibility aliases described below. App-specific instructions are shipped from [templates/base/docs/tooling.md](../templates/base/docs/tooling.md).
 
 For dependency maintenance, invoke `$update-templates` in this repository. Its instructions live at [.agents/skills/update-templates/SKILL.md](../.agents/skills/update-templates/SKILL.md).
@@ -92,7 +94,7 @@ The generator only stays current if more than one person can operate every part 
 
 **Versioning.** semantic-release derives the next version from Conventional Commit messages and does not write it back to `package.json`, which intentionally stays at `0.0.0-development`. Find the released version with `npm view create-ec-app version`. Commit subjects become the public release notes, so write them for a reader: `feat: add Dataverse read-only skill to webresource scaffold`, not a narration of what you did. Use `docs:` or `chore:` for changes that should not publish.
 
-**Dependency flow.** [`.github/dependabot.yml`](../.github/dependabot.yml) opens weekly grouped PRs for the CLI, `templates/base`, and the workflow actions; CI runs the full generated matrix on each. Merge green groups. Compiler and lint-engine pins (`typescript` aliases, `oxlint-tsgolint`, PCF) are excluded because they need the compatibility review described above; the Kendo and shadcn patches and the PCF template are refreshed with `bash update-templates.sh` and `$update-templates`. Set a quarterly reminder to run that skill even when Dependabot is quiet, and to reassess the PCF TypeScript exception.
+**Dependency flow.** [`.github/dependabot.yml`](../.github/dependabot.yml) opens weekly grouped PRs for the CLI, `templates/base`, and the workflow actions; CI runs the full generated matrix on each. Merge green groups. Compiler and lint-engine pins (`typescript` aliases, `oxlint`, `oxlint-tsgolint`, PCF) are excluded because they need the compatibility review described above; the Kendo and shadcn patches and the PCF template are refreshed with `bash update-templates.sh` and `$update-templates`. Set a quarterly reminder to run that skill even when Dependabot is quiet, and to reassess the PCF TypeScript exception.
 
 **Monitoring.** The generated build also runs every Monday on a schedule. A failure opens or updates an issue labelled `generated-build`; treat it as the signal that an upstream release broke the templates. Do not fix it by loosening lint rules or forcing peer resolution.
 

@@ -16,6 +16,12 @@ Pushing a release-producing change to `main` can publish to npm through semantic
 
 Add a dated entry for material tooling or agent-workflow changes. Record what changed and why, verification performed, and compatibility exceptions with source links and a concrete condition for revisiting them. Keep this useful for handover; omit routine formatting and repeated status updates. Entries describe repository changes, not a released npm version unless release is confirmed.
 
+### 2026-10-04 - Pin compatible Oxlint pair
+
+- Pinned root and generated-app Oxlint to 1.83.0 alongside `oxlint-tsgolint` 7.0.2001. Fresh generated-app installs had started resolving Oxlint 1.86.0, whose published peer requirement is `oxlint-tsgolint >=7.0.2003`, and failed with `ERESOLVE`.
+- Excluded Oxlint from weekly Dependabot updates and the template refresh script until both packages can be reviewed together. Revisit the pair on the next deliberate lint-engine refresh; see [npm metadata for Oxlint 1.83.0](https://www.npmjs.com/package/oxlint/v/1.83.0) and [1.86.0](https://www.npmjs.com/package/oxlint/v/1.86.0).
+- On Node 26.8.1, `npm ci`, `npm run check` (149 tests, 100% coverage), `npm run smoke:scaffold`, `npm run build:generated` (all eight apps and both PCF wrappers), and `npm pack --dry-run --json` passed. Live deployments and native Windows execution were not checked.
+
 ### 2026-09-05 — Tooling refresh and handover
 
 - Refreshed dependencies and the shadcn 4.21.0 snapshot; adopted the TypeScript 7.0.2 compiler and Oxlint 1.81.0 with type-aware engine 7.0.2001.

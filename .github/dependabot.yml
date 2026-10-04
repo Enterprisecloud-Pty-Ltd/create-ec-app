@@ -5,7 +5,7 @@
 # - templates/ui/*/package.patch.json (Kendo, shadcn) and templates/pcf/base use
 #   placeholder manifests or must be refreshed together with vendored source.
 #   Use `bash update-templates.sh` and `$update-templates` for those.
-# - Compiler and lint-engine pins (typescript aliases, oxlint-tsgolint) need a
+# - Compiler and lint-engine pins (typescript aliases, oxlint, oxlint-tsgolint) need a
 #   deliberate compatibility review; see docs/tooling.md.
 version: 2
 updates:
@@ -22,6 +22,7 @@ updates:
     ignore:
       - dependency-name: typescript
       - dependency-name: oxlint-tsgolint
+      - dependency-name: oxlint
     commit-message:
       prefix: chore
       include: scope
@@ -41,7 +42,6 @@ updates:
       - dependency-name: "@typescript/native"
       - dependency-name: oxlint-tsgolint
       - dependency-name: oxlint
-        update-types: [version-update:semver-major]
     commit-message:
       prefix: chore
       include: scope
