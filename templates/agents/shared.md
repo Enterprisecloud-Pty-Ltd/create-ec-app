@@ -100,3 +100,9 @@ Keep dated entries for material changes to this app's tooling or agent instructi
 
 - Updated the shared baseline to React 19.3, Query 5.103.1, Zod 4.6.5, and Oxlint 1.83. The TypeScript 6 API alias uses the available `@typescript/typescript6@6.0.2` release; application compilation remains TypeScript 7.0.2.
 - Public deployment assets remain tracked. The generator checks packed artifacts, fresh installs and lockfile reinstalls, zero-warning lint, and builds before and after PCF conversion. These are generator checks; verify this application's changes and live host separately.
+
+### 2026-10-04 - LTS and Current template refresh
+
+- Updated Oxlint to 1.86.0 with its required `oxlint-tsgolint` 7.0.2003 engine. Both dependencies use exact versions and must be reviewed together.
+- Updated Query to 5.104.1 and design-system lint to 0.2.0. The shadcn snapshot uses CLI 4.21.1 and `cn` 0.4.0; Kendo templates use 16.1.0 and the Code Apps SDK uses 1.5.0.
+- The generator's CI tracks the latest Node LTS and Current releases alongside Node 22. The October runtime baseline is Node 24.21.0 LTS and Node 26.10.0 Current. TypeScript 7.0.2 and its TypeScript 6 API alias remain separate from PCF's TypeScript 5.9.3 compiler.

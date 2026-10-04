@@ -1,6 +1,10 @@
 # Tooling and maintenance
 
-The generated apps use TypeScript **7.0.2** and Oxlint **1.83.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2001**. Node 26 and Node 22 are covered by the generator's Linux CI. Node 26.8.1 was used for the September 2026 refresh.
+The generated apps use TypeScript **7.0.2** and Oxlint **1.86.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2003**. The October 2026 refresh targets [Node 24.21.0 LTS and Node 26.10.0 Current](https://nodejs.org/en/about/previous-releases). Linux CI tracks `lts/*` and `node`, and retains `22.x` for the existing Node 22.14 compatibility floor. The release job uses the latest LTS.
+
+Keep Oxlint and `oxlint-tsgolint` pinned as a compatible pair in the root and base template. [Oxlint 1.86.0](https://www.npmjs.com/package/oxlint/v/1.86.0) requires `oxlint-tsgolint >=7.0.2003`; both pins now meet that contract. Review and update both pins together, following the [engine releases](https://github.com/oxc-project/tsgolint/releases).
+
+The local `.mise.toml` selects Node 24.21.0. Run `mise trust` and `mise install`, then prefix the repository commands below with `mise exec --`. To verify Current explicitly, use `mise exec node@26.10.0 --`.
 
 The CLI uses `typescript@7.0.2` directly; its editor settings select `node_modules/typescript`. The generated apps use the compatibility aliases described below. App-specific instructions are shipped from [templates/base/docs/tooling.md](../templates/base/docs/tooling.md).
 
@@ -42,9 +46,11 @@ The first shadcn policy is deliberately narrow. Layout utilities remain valid on
 
 Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded from lint, matching the previous policy. They are still typechecked and bundled. The generated `pcf/` directory has its own tooling.
 
+The design-system plugin is `@shadcn/lint` 0.2.0. The shadcn snapshot uses CLI 4.21.1 and `cn` 0.4.0; the linter reads the project's class grammar without a fallback warning. The refresh script preserves the reviewed `cn` and Recharts pins after registry generation and launches npm through its JavaScript entrypoint on macOS and Windows.
+
 ## Maintaining the setup
 
-1. Update TypeScript 7 and `oxlint-tsgolint` together; verify the engine's supported TypeScript version in the [Oxlint release notes](https://oxc.rs/blog/2026-07-22-type-aware-linting-stable). Preserve both npm aliases until the Query dependency chain supports the native compiler API.
+1. Review TypeScript 7, Oxlint, and `oxlint-tsgolint` together; verify the engine's supported TypeScript version in the [type-aware linting guide](https://oxc.rs/docs/guide/usage/linter/type-aware.html) and each Oxlint release's peer requirement. Update the two lint pins together. Preserve both npm aliases until the Query dependency chain supports the native compiler API.
 2. Review React Hooks, Query, and `@shadcn/lint` releases when updating Oxlint. Retest both invalid and corrected examples using the generator's `scripts/check-generated-lint.mjs <app-directory>`.
 3. Run checks and a production build after dependency changes. In `create-ec-app`, run `npm run check`, `npm run smoke:scaffold`, and `npm run build:generated`; the last command checks all eight target/UI combinations and both PCF wrappers.
 4. Refresh shadcn source and its dependency patch together using the generator's pinned `npm run refresh:shadcn-template`. Updating package versions alone does not refresh vendored components.
@@ -74,7 +80,7 @@ npm run smoke:scaffold
 npm run build:generated
 ```
 
-`check` includes CLI typechecking, lint, and unit coverage. `build:generated` installs the packed npm artifact and checks four targets with both UI libraries. Each app gets a fresh install followed by `npm ci`, a production build, lint with zero warnings, and a TypeScript dependency-tree check. The matrix also verifies agent guidance, the deployed SWA routing config, both PCF wrappers with explicit lint and CSS scoping checks, and negative/positive lint fixtures. It rebuilds and lints webresources after PCF conversion; the corrected lint fixture must also compile. CI is configured for Node 22 and 26; merging a release-producing commit to `main` can publish to npm.
+`check` includes CLI typechecking, lint, and unit coverage. `build:generated` installs the packed npm artifact and checks four targets with both UI libraries. Each app gets a fresh install followed by `npm ci`, a production build, lint with zero warnings, and a TypeScript dependency-tree check. The matrix also verifies agent guidance, the deployed SWA routing config, both PCF wrappers with explicit lint and CSS scoping checks, and negative/positive lint fixtures. It rebuilds and lints webresources after PCF conversion; the corrected lint fixture must also compile, and plugin warnings fail the fixture. CI tracks the latest Node LTS and Current releases alongside Node 22; merging a release-producing commit to `main` can publish to npm.
 
 Run the smoke and generated-build scripts through the npm commands above. They use npm's `npm_execpath` entrypoint with the current Node executable, which avoids executing `npm.cmd` directly on Windows. The generated matrix uses numeric webresource project names and inferred PCF constructors to verify that naming path with both UI libraries.
 
@@ -88,11 +94,11 @@ The generator only stays current if more than one person can operate every part 
 
 **npm package.** `create-ec-app` is published from GitHub Actions through npm trusted publishing (OIDC), so releases do not depend on anyone's npm token. Managing the package does: changing the trusted publisher, deprecating versions, or recovering 2FA needs an npm owner. Keep at least two active EC accounts as owners and confirm with `npm owner ls create-ec-app`. Add one with `npm owner add <npm-username> create-ec-app`.
 
-**GitHub.** [`.github/CODEOWNERS`](../.github/CODEOWNERS) lists the reviewers for the release surface; keep it aligned with the npm owners. Protect `main` in repository settings: require a pull request, require every Node 22.x and 26.x matrix check emitted by `build-test-smoke` and `generated-build` (select the exact check names shown by a completed PR run, including any reusable-workflow prefix), and disallow force pushes. Every push to `main` with a `feat:` or `fix:` commit publishes a new npm version, so `main` should only receive reviewed merges.
+**GitHub.** [`.github/CODEOWNERS`](../.github/CODEOWNERS) lists the reviewers for the release surface; keep it aligned with the npm owners. Protect `main` in repository settings: require a pull request, require every `22.x`, `lts/*`, and `node` matrix check emitted by `build-test-smoke` and `generated-build` (select the exact check names shown by a completed PR run, including any reusable-workflow prefix), and disallow force pushes. Every push to `main` with a `feat:` or `fix:` commit publishes a new npm version, so `main` should only receive reviewed merges.
 
 **Versioning.** semantic-release derives the next version from Conventional Commit messages and does not write it back to `package.json`, which intentionally stays at `0.0.0-development`. Find the released version with `npm view create-ec-app version`. Commit subjects become the public release notes, so write them for a reader: `feat: add Dataverse read-only skill to webresource scaffold`, not a narration of what you did. Use `docs:` or `chore:` for changes that should not publish.
 
-**Dependency flow.** [`.github/dependabot.yml`](../.github/dependabot.yml) opens weekly grouped PRs for the CLI, `templates/base`, and the workflow actions; CI runs the full generated matrix on each. Merge green groups. Compiler and lint-engine pins (`typescript` aliases, `oxlint-tsgolint`, PCF) are excluded because they need the compatibility review described above; the Kendo and shadcn patches and the PCF template are refreshed with `bash update-templates.sh` and `$update-templates`. Set a quarterly reminder to run that skill even when Dependabot is quiet, and to reassess the PCF TypeScript exception.
+**Dependency flow.** [`.github/dependabot.yml`](../.github/dependabot.yml) opens weekly grouped PRs for the CLI, `templates/base`, and the workflow actions; CI runs the full generated matrix on each. Merge green groups. Compiler and lint-engine pins (`typescript` aliases, `oxlint`, `oxlint-tsgolint`, PCF) are excluded because they need the compatibility review described above; the Kendo and shadcn patches and the PCF template are refreshed with `bash update-templates.sh` and `$update-templates`. Set a quarterly reminder to run that skill even when Dependabot is quiet, and to reassess the PCF TypeScript exception.
 
 **Monitoring.** The generated build also runs every Monday on a schedule. A failure opens or updates an issue labelled `generated-build`; treat it as the signal that an upstream release broke the templates. Do not fix it by loosening lint rules or forcing peer resolution.
 

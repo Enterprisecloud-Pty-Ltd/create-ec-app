@@ -19,7 +19,9 @@ npm 11 blocks dependency install scripts unless the package manifest approves th
 
 ## Compiler and lint setup
 
-The template baseline uses TypeScript 7.0.2, Oxlint 1.83.0, and the matching `oxlint-tsgolint` 7.0.2001 engine. Node 22 and 26 are covered by the generator's Linux CI.
+The template baseline uses TypeScript 7.0.2, Oxlint 1.86.0, and the matching `oxlint-tsgolint` 7.0.2003 engine. The generator's Linux CI tracks the latest Node LTS and Current releases, plus Node 22. The October 2026 baseline is Node 24.21.0 LTS and Node 26.10.0 Current; the existing compatibility floor remains Node 22.14.
+
+Keep Oxlint and `oxlint-tsgolint` pinned together. Oxlint 1.86.0 needs an engine of at least 7.0.2003, and both pins satisfy that requirement. The shadcn template uses `cn` 0.4.0 with `@shadcn/lint` 0.2.0 so the linter can use the project's class grammar without fallback warnings.
 
 `@typescript/native` aliases `typescript@7.0.2` and supplies the `tsc` command. `typescript` aliases Microsoft's `@typescript/typescript6@6.0.2` compatibility package for the JavaScript API used by Query's lint dependencies; its compiler command is `tsc6`. Keep the aliases until those dependencies support the native API. Verify with `npx tsc --version` and `npm ls typescript @typescript/native`.
 

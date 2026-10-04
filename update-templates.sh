@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="$SCRIPT_DIR/templates"
-# Compiler/engine upgrades need a deliberate compatibility review, including PCF.
-PROTECTED_PACKAGES="typescript,@typescript/native,oxlint-tsgolint"
+# Compiler and lint upgrades need a deliberate compatibility review, including PCF.
+PROTECTED_PACKAGES="typescript,@typescript/native,oxlint,oxlint-tsgolint"
 
 # Source and dependencies for shadcn must be refreshed together by its pinned CLI.
 while IFS= read -r -d '' patch_file; do

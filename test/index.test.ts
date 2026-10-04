@@ -518,7 +518,7 @@ describe("scaffoldProject", () => {
 			const generated = await fs.readJson(path.join(rootDir, "combined-app", "package.json"));
 			expect(generated.description).toBe("combined-app combination");
 			expect(generated.scripts.dev).toBe("combination-dev");
-			expect(generated.dependencies["@progress/kendo-react-buttons"]).toBe("^15.1.0");
+			expect(generated.dependencies["@progress/kendo-react-buttons"]).toBe("^16.1.0");
 		} finally {
 			if (originalPatch === undefined) await fs.remove(patchPath);
 			else await fs.writeFile(patchPath, originalPatch);
