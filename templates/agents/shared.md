@@ -101,6 +101,11 @@ Keep dated entries for material changes to this app's tooling or agent instructi
 - Updated the shared baseline to React 19.3, Query 5.103.1, Zod 4.6.5, and Oxlint 1.83. The TypeScript 6 API alias uses the available `@typescript/typescript6@6.0.2` release; application compilation remains TypeScript 7.0.2.
 - Public deployment assets remain tracked. The generator checks packed artifacts, fresh installs and lockfile reinstalls, zero-warning lint, and builds before and after PCF conversion. These are generator checks; verify this application's changes and live host separately.
 
+### 2026-10-15 - Compatible dependency refresh
+
+- Updated Oxlint to 1.88.0 with `oxlint-tsgolint` 7.0.2004. Both dependencies stay exact pins and must be reviewed together. [Oxlint 1.88.0](https://github.com/oxc-project/oxc/releases/tag/oxlint_v1.88.0) still requires `oxlint-tsgolint >=7.0.2003`, and [type-aware linting](https://oxc.rs/docs/guide/usage/linter/type-aware.html) still requires TypeScript 7.
+- Updated Vite to 8.3.4, React to 19.3.1, Query to 5.104.3, Zod to 4.6.7, and `@shadcn/lint` to 0.2.1. Kendo Buttons and Popup are 16.2.0 with Fluent theme 14.6.1. The shadcn snapshot remains CLI 4.21.1 and `cn` 0.4.0.
+
 ### 2026-10-04 - LTS and Current template refresh
 
 - Updated Oxlint to 1.86.0 with its required `oxlint-tsgolint` 7.0.2003 engine. Both dependencies use exact versions and must be reviewed together.
