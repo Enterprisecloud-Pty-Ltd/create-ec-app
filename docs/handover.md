@@ -1,6 +1,8 @@
 # Maintainer handover
 
-The 2026-10-04 refresh updates the generator, layered templates, and release checks for the latest Node LTS and Current releases. The repository's `.mise.toml` selects Node 24.21.0 LTS; CI tracks `lts/*` and `node` with `check-latest: true`, plus `22.x` for the existing compatibility floor. The release job uses LTS. Live host evidence from the September handover remains in a separate private report.
+The 2026-10-15 refresh applies the open Dependabot updates and the compatible releases that superseded them. The repository's `.mise.toml` selects Node 24.21.0 LTS; CI tracks `lts/*` and `node` with `check-latest: true`, plus `22.x` for the existing compatibility floor. The release job uses LTS. Live host evidence from the September handover remains in a separate private report.
+
+Current direct pins: TypeScript 7.0.2 with the TypeScript 6.0.2 API alias, Oxlint 1.88.0 with `oxlint-tsgolint` 7.0.2004, Vite 8.3.4, React 19.3.1, Query 5.104.3, Vitest 5.0.4, PostCSS 8.5.30, KendoReact 16.2.0 with Fluent theme 14.6.1, and `@shadcn/lint` 0.2.1. The shadcn component snapshot remains CLI 4.21.1 and `cn` 0.4.0. PCF remains `pcf-scripts` 1.51.1 and TypeScript 5.9.3.
 
 ## Current change set
 
@@ -19,13 +21,16 @@ Shadcn refresh now uses CLI 4.21.1 and preserves the reviewed `cn` 0.4.0 and Rec
 ## Compatibility decisions
 
 - TypeScript 7.0.2 remains the application compiler. The Query lint chain still resolves `@typescript-eslint` packages whose supported compiler API range stops before native TypeScript 7, so keep the TypeScript 6 compatibility alias. Follow Microsoft's [side-by-side compiler guidance](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/#running-side-by-side-with-typescript-60) and remove the alias only after the installed dependency tree supports the native API.
-- Oxlint 1.86.0 requires `oxlint-tsgolint >=7.0.2003`, so the previous 7.0.2001 pin cannot be retained with this upgrade. TypeScript 7.0.2 remains the latest stable compiler and the engine supports TypeScript 7. Keep the React Hooks, Fast Refresh, React Compiler, Query, and shadcn rule fixtures when updating the pair. Review the [Oxlint release](https://github.com/oxc-project/oxc/releases/tag/oxlint_v1.86.0), [engine release](https://github.com/oxc-project/tsgolint/releases/tag/v7.0.2003), and [type-aware linting guidance](https://oxc.rs/docs/guide/usage/linter/type-aware.html).
+- Oxlint 1.88.0 requires `oxlint-tsgolint >=7.0.2003`, so the pair is now 1.88.0 and 7.0.2004. TypeScript 7.0.2 remains the latest stable compiler, and [type-aware linting](https://oxc.rs/docs/guide/usage/linter/type-aware.html) requires TypeScript 7. The [1.88.0 release](https://github.com/oxc-project/oxc/releases/tag/oxlint_v1.88.0) records AST comment-storage changes; keep the React Hooks, Fast Refresh, React Compiler, Query, and shadcn rule fixtures when updating the pair. Review the [engine release](https://github.com/oxc-project/tsgolint/releases/tag/v7.0.2004) with every Oxlint pin change.
 - Vitest 5 requires Node 22.12 or later and Vite 6.4 or later. The repository floor is Node 22.14 and generated apps use Vite 8, so the paired Vitest and coverage upgrade is supported. See the [Vitest 5 migration guide](https://vitest.dev/guide/migration/).
 - Shadcn CLI 4.21.1, `@shadcn/react` 0.3.1, and `cn` 0.4.0 are current stable releases. The pinned refresh ran again and preserved the neutral theme and portal transforms. The [design-system linter](https://github.com/shadcn-ui/lint) requires `cn` 0.3.2 or later to read the application's grammar; 0.4.0 satisfies that condition. Refresh source and dependencies together when the [shadcn changelog](https://ui.shadcn.com/docs/changelog) identifies a later release.
 - `pcf-scripts` and `pcf-start` 1.51.1 remain the latest released Microsoft packages. `pcf-scripts` still declares TypeScript 4 or 5. Its refreshed lock resolves `ts-loader` 9.6.2, whose compiler integration still uses the JavaScript API, so PCF remains on TypeScript 5.9.3. Reconsider only after a released Microsoft package and loader support the candidate compiler and both generated wrappers pass build, lint, CSS scoping, and runtime checks. See the [`pcf-scripts` release history](https://www.npmjs.com/package/pcf-scripts?activeTab=versions), [ts-loader changelog](https://github.com/TypeStrong/ts-loader/blob/main/CHANGELOG.md), and [TypeScript 7 support discussion](https://github.com/TypeStrong/ts-loader/issues/1702).
-- KendoReact 16.1.0 updates the Buttons and Popup packages used by these templates. The listed [16.0 breaking changes](https://www.telerik.com/kendo-react-ui/components/updates/breaking-changes/16-0-0) concern other components. Keep both PCF popup context and CSS scoping checks when refreshing Kendo and its theme.
+- KendoReact 16.2.0 updates the Buttons and Popup packages used by these templates, with Fluent theme 14.6.1. The [16.2 changelog](https://www.telerik.com/kendo-react-ui/components/changelogs/ui-for-react) adds no breaking-change release after 16.0.0. The listed [16.0 breaking changes](https://www.telerik.com/kendo-react-ui/components/updates/breaking-changes/16-0-0) concern other components. Keep both PCF popup context and CSS scoping checks when refreshing Kendo and its theme.
+- shadcn CLI 4.21.5 is published. This refresh does not regenerate the snapshot. Refresh vendored source and `templates/ui/shadcn-ui/package.patch.json` together with `npm run refresh:shadcn-template` after updating the pinned CLI in `scripts/refresh-shadcn-template.ts` and `src/shadcnRegistry.ts`. `@shadcn/lint` 0.2.1 still depends on `cn` 0.4.0.
 
 ## Verification state
+
+On 2026-10-15, Node 24.21.0 LTS passed `npm run check` (149 tests, 100% coverage), packed scaffold smoke (170 files), and `npm run build:generated` (all eight apps, both PCF wrappers, CSS scoping, and the failing/passing lint fixture). Node 22, Node 26, native Windows, paid Kendo license activation, and live deployments were not repeated for this dependency refresh.
 
 On 2026-10-04, the full local gates passed on Node 24.21.0 LTS, Node 26.10.0 Current, and the existing minimum Node 22.14.0. Each runtime passed:
 
@@ -59,7 +64,7 @@ The 2026-10-04 audits found the following entries. Counts include packages affec
 |---|---|---|
 | CLI production dependencies | 0 | Reaudit after dependency changes. |
 | Shared base and a generated Kendo webresource | 0 | Reaudit after dependency changes. |
-| CLI including release tooling | 11: 10 high, 1 moderate | A released Semantic Release dependency chain that fixes `braces`, and an npm bundle that fixes its embedded `brace-expansion`, `http-cache-semantics`, `ip-address`, and `undici`. |
+| CLI including release tooling | 13: 10 high, 2 moderate, 1 critical | A released Semantic Release dependency chain that updates `handlebars` past 4.7.9 and fixes `braces`, and an npm bundle that fixes its embedded `brace-expansion`, `http-cache-semantics`, `ip-address`, `undici`, and `postcss-selector-parser` 7.1.4. |
 | Generated shadcn webresource | 7 high | A released shadcn CLI or compatible transitive update that removes the `braces` finding from its fast-glob/ts-morph chain. |
 | PCF tooling | 10: 5 high, 5 moderate | Microsoft packages newer than 1.51.1 with corrected browser-sync/`braces` and Application Insights/OpenTelemetry trees. |
 | Generated SWA with Kendo | 6: 5 high, 1 low | An SWA CLI newer than 2.0.10 with corrected `adm-zip`, devcert/`tmp`, and selfsigned/node-forge trees. |

@@ -1,8 +1,8 @@
 # Tooling and maintenance
 
-The generated apps use TypeScript **7.0.2** and Oxlint **1.86.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2003**. The October 2026 refresh targets [Node 24.21.0 LTS and Node 26.10.0 Current](https://nodejs.org/en/about/previous-releases). Linux CI tracks `lts/*` and `node`, and retains `22.x` for the existing Node 22.14 compatibility floor. The release job uses the latest LTS.
+The generated apps use TypeScript **7.0.2** and Oxlint **1.88.0**, with the matching type-aware engine **oxlint-tsgolint 7.0.2004**. The October 2026 refresh targets [Node 24.21.0 LTS and Node 26.10.0 Current](https://nodejs.org/en/about/previous-releases). Linux CI tracks `lts/*` and `node`, and retains `22.x` for the existing Node 22.14 compatibility floor. The release job uses the latest LTS.
 
-Keep Oxlint and `oxlint-tsgolint` pinned as a compatible pair in the root and base template. [Oxlint 1.86.0](https://www.npmjs.com/package/oxlint/v/1.86.0) requires `oxlint-tsgolint >=7.0.2003`; both pins now meet that contract. Review and update both pins together, following the [engine releases](https://github.com/oxc-project/tsgolint/releases).
+Keep Oxlint and `oxlint-tsgolint` pinned as a compatible pair in the root and base template. [Oxlint 1.88.0](https://www.npmjs.com/package/oxlint/v/1.88.0) requires `oxlint-tsgolint >=7.0.2003`; both pins now meet that contract. Review and update both pins together, following the [engine releases](https://github.com/oxc-project/tsgolint/releases).
 
 The local `.mise.toml` selects Node 24.21.0. Run `mise trust` and `mise install`, then prefix the repository commands below with `mise exec --`. To verify Current explicitly, use `mise exec node@26.10.0 --`.
 
@@ -46,7 +46,7 @@ The first shadcn policy is deliberately narrow. Layout utilities remain valid on
 
 Vendored `src/components/ui/**` and `src/hooks/use-mobile.ts` remain excluded from lint, matching the previous policy. They are still typechecked and bundled. The generated `pcf/` directory has its own tooling.
 
-The design-system plugin is `@shadcn/lint` 0.2.0. The shadcn snapshot uses CLI 4.21.1 and `cn` 0.4.0; the linter reads the project's class grammar without a fallback warning. The refresh script preserves the reviewed `cn` and Recharts pins after registry generation and launches npm through its JavaScript entrypoint on macOS and Windows.
+The design-system plugin is `@shadcn/lint` 0.2.1. The shadcn snapshot uses CLI 4.21.1 and `cn` 0.4.0; the linter reads the project's class grammar without a fallback warning. `@shadcn/lint` 0.2.1 still depends on `cn` 0.4.0. The refresh script preserves the reviewed `cn` and Recharts pins after registry generation and launches npm through its JavaScript entrypoint on macOS and Windows.
 
 ## Maintaining the setup
 
