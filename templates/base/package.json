@@ -15,24 +15,24 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.3.3",
-		"@tanstack/react-query": "^5.104.3",
+		"@tanstack/react-query": "^5.104.5",
 		"@types/xrm": "^9.0.97",
 		"react": "^19.3.1",
 		"react-dom": "^19.3.1",
 		"tailwindcss": "^4.3.3",
 		"zod": "^4.6.7",
-		"zustand": "^5.0.15"
+		"zustand": "^5.0.16"
 	},
 	"devDependencies": {
-		"@shadcn/lint": "^0.2.1",
-		"@tanstack/eslint-plugin-query": "^5.104.3",
+		"@shadcn/lint": "^0.2.3",
+		"@tanstack/eslint-plugin-query": "^5.104.5",
 		"@types/node": "^26.6.5",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
 		"@vitejs/plugin-react": "^6.1.2",
 		"eslint-plugin-react-hooks": "^7.1.1",
 		"typescript": "npm:@typescript/typescript6@6.0.2",
-		"vite": "^8.3.4",
+		"vite": "^8.3.5",
 		"oxlint": "1.88.0",
 		"oxlint-tsgolint": "7.0.2004",
 		"@typescript/native": "npm:typescript@7.0.2"
